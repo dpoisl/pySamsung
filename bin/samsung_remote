@@ -1,0 +1,45 @@
+#!/usr/bin/python3
+
+import os
+import sys
+import time
+#import samsung
+from optparse import OptionParser
+
+def parse_options():
+    description = """Send commands to Samsung D-Series (and up) devices. 
+Commands can either start with "KEY_" and be a valid key code or any 
+text (eG usable for password fields, etc.)."""
+    p = OptionParser(usage="usage: %prog [options] command [...]", version="%prog 1.0.0",
+            description=description)
+    p.add_option("-i", "--ip", dest="ip", help=("Device IP (mandatory if you don't set SAMSUNG_DEVICE " + \
+            "in your environment)"))
+    p.add_option("-p", "--port", dest="port", action="store", type="int", 
+            default="55000", help="Device Port (default %default)")
+    p.add_option("-d", "--delay", dest="delay", action="store", type="float", 
+            default="0.5", help="Delay between commands in seconds (default: %default)")
+    (options, args) = p.parse_args()
+    if options.ip is None:
+        try:
+            options.ip = os.environ["SAMSUNG_DEVICE"]
+        except KeyError:
+            sys.stderr.write("Either set SAMSUNG_DEVICE in the environment or specify the device IP\n")
+            sys.exit(1)
+    if len(args) == 0:
+        sys.stderr.write("Please specify one or more commands to send\n")
+        sys.exit(1)
+    return (options, args)
+
+if __name__ == "__main__":
+    (options, args) = parse_options()
+    device = samsung.Remote(ip=options.samsung_ip, port=options.port)
+    for arg in args:
+        if arg.startswith("KEY_"):
+            device.send_key(arg)
+        elif arg.startswith("CH"):
+            for digit in "%04d" % int(ch[2:]):
+                device.send_key("KEY_" + digit)
+        else:
+            device.send_text(arg)
+        time.sleep(options.delay)
+    device.disconnect()
