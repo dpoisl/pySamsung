@@ -1,6 +1,9 @@
 __version__ = "0.1.0"
 __author__ = "David Poisl <david@poisl.at>"
 
+__all__ = ("Remote", "AuthenticationError", "ConnectionError", "TimeoutError")
+
+
 from base64 import b64encode
 import socket
 
@@ -316,12 +319,6 @@ class Remote(object):
         self._sock = None
         self._local_mac = None
 
-    def get_local_mac(self):
-        if self._sock is None:
-            self.connect()
-        self._local_ip = self._sock.getsockname()[0]
-        self._local_mac = LOCAL_MAC
-    
     def connect(self):
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._sock.settimeout(5.0)
@@ -329,8 +326,11 @@ class Remote(object):
             self._sock.connect((self.ip, self.port))
         except socket.error:
             raise ConnectionError("Couldn't connect to %s:%d" % (self.ip, self.port))
-        auth_content = "\x64\x00%s%s%s" % (lenstr64(self.local_ip),
-                                           lenstr64(self.local_mac),
+        self._local_ip = self._sock.getsockname()[0]
+        self._local_mac = LOCAL_MAC
+
+        auth_content = "\x64\x00%s%s%s" % (lenstr64(self._local_ip),
+                                           lenstr64(self._local_mac),
                                            lenstr64(self.app_label))
         auth = "\x00%s%s" % (lenstr(self.app_label + ".iapp.samsung"), 
                              lenstr(auth_content))
@@ -360,7 +360,7 @@ class Remote(object):
         self._sock = None
     
     def send_key(self, key):
-        return self._send(data)
+        return self._send(key)
 
     def send_text(self, text):
         return self._send(text, as_text=True)
@@ -371,7 +371,7 @@ class Remote(object):
             self.connect()
 
         if as_text:
-            data_payload = "\x01\x00%s" % lenstr64(data)
+            data_payload = "\x01\x00\x00%s" % lenstr64(data)
             mode = "\x01"
         else:
             data_payload = "\x00\x00\x00%s" % lenstr64(data)
@@ -415,7 +415,7 @@ class SamsungTV(object):
         self.model = model
         self.ip = ip
         self.port = port
-        self.local_ip = None
+        self._local_ip = None
         self.local_mac = None
         self.get_local_mac()
 
