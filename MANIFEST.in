@@ -1,0 +1,3 @@
+include scripts/samsung_remote
+recursive_include samsung *.py
+include README.md
