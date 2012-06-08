@@ -37,11 +37,11 @@ if __name__ == "__main__":
     device = samsung.Remote("pyremote", ip=options.ip, port=options.port)
     for arg in args:
         if arg.startswith("KEY_"):
-            device.send_key(arg)
+            print "%r" % device.send_key(arg)
         elif arg.startswith("CH"):
             for digit in "%04d" % int(ch[2:]):
                 device.send_key("KEY_" + digit)
         else:
-            device.send_text(arg)
+            print "%r" % device.send_text(arg)
         time.sleep(options.delay)
     device.disconnect()
