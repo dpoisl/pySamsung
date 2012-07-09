@@ -1,25 +1,28 @@
+"""
+Samsung remote control library
+"""
+
+
 __version__ = "0.1.0"
 __author__ = "David Poisl <david@poisl.at>"
 
-__all__ = ("Remote", "AuthenticationError", "ConnectionError", "TimeoutError")
+__all__ = ("Remote",)
 
 
-from base64 import b64encode
-import socket
+from . import errors
+from . import base
 
 KEYS = (# power
-        "KEY_POWER", #tv: nothing
-        "KEY_POWEROFF",
-        "KEY_POWERON", # tv: nothing
+        "KEY_POWER", "KEY_POWEROFF", "KEY_POWERON",
         # numpad
         "KEY_0", "KEY_1", "KEY_2", "KEY_3", "KEY_4", "KEY_5", "KEY_6", "KEY_7", 
         "KEY_8", "KEY_9", "KEY_11", "KEY_12", 
         # admin keys
         "KEY_3SPEED", "KEY_FACTORY", 
         # navigation
-        "KEY_LEFT", "KEY_RIGHT", "KEY_UP", "KEY_DOWN", "KEY_ENTER", "KEY_RETURN",
-        "KEY_EXIT", "KEY_HELP", "KEY_HOME",  "KEY_GUIDE", "KEY_MENU", "KEY_TOOLS",
-        "KEY_TOPMENU", "KEY_INFO", "KEY_CONTENTS", 
+        "KEY_LEFT", "KEY_RIGHT", "KEY_UP", "KEY_DOWN", "KEY_ENTER", 
+        "KEY_RETURN", "KEY_EXIT", "KEY_HELP", "KEY_HOME",  "KEY_GUIDE", 
+        "KEY_MENU", "KEY_TOOLS", "KEY_TOPMENU", "KEY_INFO", "KEY_CONTENTS", 
         # volume, cannels
         "KEY_VOLDOWN", "KEY_VOLUP", "KEY_CHUP", "KEY_CHDOWN", "KEY_CH_LIST",
         "KEY_FAVCH", "KEY_MUTE", "KEY_PRECH",
@@ -31,10 +34,10 @@ KEYS = (# power
         # DVD?
         "KEY_DISC_MENU", "KEY_DVR_MENU", "KEY_ANGLE", 
         # source selection
-        "KEY_SOURCE", #TV: source menu
-        "KEY_ANYNET", "KEY_HDMI", "KEY_HDMI1", "KEY_HDMI2", "KEY_HDMI3", "KEY_HDMI4", 
-        "KEY_SVIDEO1", "KEY_SVIDEO2", "KEY_SVIDEO3", "KEY_ANTENA", "KEY_AV1", "KEY_AV2",
-        "KEY_AV3", "KEY_COMPONENT1", "KEY_COMPONENT2",  
+        "KEY_SOURCE", "KEY_ANYNET", "KEY_HDMI", "KEY_HDMI1", "KEY_HDMI2", 
+        "KEY_HDMI3", "KEY_HDMI4", "KEY_SVIDEO1", "KEY_SVIDEO2", "KEY_SVIDEO3", 
+        "KEY_ANTENA", "KEY_AV1", "KEY_AV2", "KEY_AV3", "KEY_COMPONENT1", 
+        "KEY_COMPONENT2",  
         # *?* ARC/ANYNET?
         "KEY_AUTO_ARC_ANYNET_MODE_OK", "KEY_AUTO_ARC_AUTOCOLOR_FAIL", 
         "KEY_AUTO_ARC_AUTOCOLOR_SUCCESS", "KEY_AUTO_ARC_CAPTION_ENG", 
@@ -49,11 +52,10 @@ KEYS = (# power
         "KEY_AUTO_ARC_PIP_SMALL", "KEY_AUTO_ARC_PIP_SOURCE_CHANGE", 
         "KEY_AUTO_ARC_PIP_WIDE",
         # aspect ratio switch?
-        "KEY_ASPECT", #TV: aspect ratio
-        "KEY_4_3", #TV: nothing
-        "KEY_16_9", #TV: nothing
+        "KEY_ASPECT", "KEY_4_3", "KEY_16_9", 
         # zoom control?
-        "KEY_ZOOM1", "KEY_ZOOM2", "KEY_ZOOM_IN", "KEY_ZOOM_MOVE", "KEY_ZOOM_OUT", 
+        "KEY_ZOOM1", "KEY_ZOOM2", "KEY_ZOOM_IN", "KEY_ZOOM_MOVE", 
+        "KEY_ZOOM_OUT", 
         # ?????
         "KEY_AD", "KEY_ADDDEL", "KEY_ALT_MHP", "KEY_ANYVIEW", "KEY_APP_LIST", 
         "KEY_AUTO_ARC_ANTENNA_AIR", "KEY_AUTO_ARC_ANTENNA_CABLE", 
@@ -65,10 +67,9 @@ KEYS = (# power
         "KEY_DNSe", "KEY_DOOR", "KEY_DSS_MODE", "KEY_DTV", "KEY_DTV_LINK",
         "KEY_DTV_SIGNAL", "KEY_DVD_MODE", "KEY_DVI", "KEY_DVR", "KEY_DYNAMIC",
         "KEY_ENTERTAINMENT", "KEY_ESAVING", "KEY_FF_", "KEY_FM_RADIO",
-        "KEY_GAME", #TV: message "not possible"
-        "KEY_ID_INPUT", "KEY_ID_SETUP", "KEY_INSTANT_REPLAY", "KEY_LINK",
-        "KEY_LIVE", "KEY_MAGIC_BRIGHT", "KEY_MAGIC_CHANNEL", "KEY_MDC",
-        "KEY_MIC", "KEY_MORE", "KEY_MOVIE1", "KEY_MS", "KEY_MTS", 
+        "KEY_GAME", "KEY_ID_INPUT", "KEY_ID_SETUP", "KEY_INSTANT_REPLAY", 
+        "KEY_LINK", "KEY_LIVE", "KEY_MAGIC_BRIGHT", "KEY_MAGIC_CHANNEL", 
+        "KEY_MDC", "KEY_MIC", "KEY_MORE", "KEY_MOVIE1", "KEY_MS", "KEY_MTS", 
         "KEY_NINE_SEPERATE", "KEY_OPEN", "KEY_PANORAMA", "KEY_PCMODE", 
         "KEY_PERPECT_FOCUS", "KEY_PICTURE_SIZE", "KEY_PLUS100", "KEY_PMODE",
         "KEY_PRINT", "KEY_PROGRAM", "KEY_QUICK_REPLAY", "KEY_REPEAT", 
@@ -76,10 +77,8 @@ KEYS = (# power
         "KEY_SEFFECT", "KEY_SETUP_CLOCK_TIMER", "KEY_SLEEP", "KEY_SOUND_MODE",
         "KEY_SRS", "KEY_STANDARD", "KEY_STB_MODE", "KEY_STILL_PICTURE",
         "KEY_SUB_TITLE", "KEY_TURBO", "KEY_TV", "KEY_TV_MODE", 
-        "KEY_VCHIP", #HT: VCHIP
-        "KEY_VCR_MODE", "KEY_W_LINK", 
-        "KEY_WHEEL_LEFT", #HT: volume wheel?
-        "KEY_WHEEL_RIGHT", #HT: volume wheel?
+        "KEY_VCHIP", "KEY_VCR_MODE", "KEY_W_LINK", "KEY_WHEEL_LEFT", 
+        "KEY_WHEEL_RIGHT", 
         # PIP?
         "KEY_PIP_CHDOWN", "KEY_PIP_CHUP", "KEY_PIP_ONOFF", "KEY_PIP_SCAN",
         "KEY_PIP_SIZE", "KEY_PIP_SWAP",
@@ -99,171 +98,30 @@ KEYS = (# power
         "KEY_PANNEL_VOLDOW", "KEY_PANNEL_VOLUP", 
         )
 
-LOCAL_MAC = "00:23:4d:b3:a2:cd" #TODO: get from interface?
-TV_IP = "192.168.1.120"
 
-class AuthenticationError(Exception):
-    pass
-
-class ConnectionError(Exception):
-    pass
-
-class TimeoutError(Exception):
-    pass
-
-
-class Response(object):
-    # data content: authentication request
-    AUTH_OK = "\x64\x00\x01\x00"
-    AUTH_ACCESS_DENIED = "\x64\x00\x00\x00"
-    AUTH_NEED_CONFIRM = "\x0a\x00\x02\x00\x00\x00" # -- will OK or denied be sent later?
-    AUTH_TIMEOUT = "\x64\x00"
-
-    KEY_OK = "\x00\x00\x00\x00" # reponse from key press (always 0x00000000?)
-    
-    HDR_KEY_CONFIRM = 0x00 # key happened in tv mode
-    HDR_STATE_CHANGE = 0x02 # seems to be a status update from TV!
-    HDR_KEY_IN_MENU = 0x01 # key happened in menu or other modes?
-    
-    STATUS_SHOWING_MENU = '\n\x00\x02\x00\x00\x00' #?
-    STATUS_SHOWING_TV = '\n\x00\x01\x00\x00\x00' #?
-
-    def __init__(self, data):
-        self.header = ord(data[0])
-        self.sender = parse_lenstr(data[1:])
-        self.payload = parse_lenstr(data[len(self.sender) + 3:])
-
-    def __repr__(self):
-        return "<Response from=%s, header=%x, data=%r>" % (
-                self.sender, self.header, self.payload)
-
-
-
-def hexlen(string):
-    """Return the length of a string as byte string"""
-    length = len(string)
-    if length > 256 * 256:
-        raise ValueError("String too long")
-    return chr(length % 256) + chr(length / 256)
-
-
-def lenstr(string):
-    """
-    convert a string to samsungs string format
-    
-    samsung strings contain the length as integer, a 0 byte and then
-    the original string
-    """
-    return "%s%s" % (hexlen(string), string)
-
-
-def lenstr64(string):
-    """Shortcut: create lenstr of a base64 encoded string"""
-    return lenstr(b64encode(string))
-
-
-def parse_lenstr(src):
-    length = ord(src[0]) + ord(src[1]) * 256
-    return src[2:length+2]
-
-
-class Remote(object):
-    def __init__(self, app_label, ip, port=55000):
-        self.ip = ip
-        self.port = port
-        self.app_label = app_label
-        self._local_ip = None
-        self._sock = None
-        self._local_mac = None
-
-    def connect(self):
-        self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._sock.settimeout(5.0)
-        try:
-            self._sock.connect((self.ip, self.port))
-        except socket.error:
-            raise ConnectionError("Couldn't connect to %s:%d" % (self.ip, self.port))
-        self._local_ip = self._sock.getsockname()[0]
-        self._local_mac = LOCAL_MAC
-
-        auth_content = "\x64\x00%s%s%s" % (lenstr64(self._local_ip),
-                                           lenstr64(self._local_mac),
-                                           lenstr64(self.app_label))
-        auth = "\x00%s%s" % (lenstr(self.app_label + ".iapp.samsung"), 
-                             lenstr(auth_content))
-        try:
-            self._sock.send(auth)
-            ar = self._sock.recv(2048)
-            auth_response = Response(ar)
-        except socket.timeout:
-            raise TimeoutError("Timeout in authentication")
-        
-        if auth_response.payload == "\x64\x00\x01\x00":
-            return True
-        elif auth_response.payload == "\x64\x00\x00\x00":
-            self._sock.close()
-            raise AuthenticationError("access denied by remote device")
-        elif auth_response.payload == "\x0a\x00\x02\x00\x00\x00":
-            raise AuthenticationError("please allow this remote on your device")
-        elif auth_response.payload == "\x64\x00":
-            raise AuthenticationError("timeout")
-        else:
-            print("unknown result: %r" % auth_response)
-    
-    def disconnect(self):
-        self._sock.close()
-        self._sock = None
-    
+class Remote(base.Connection):
     def send_key(self, key):
-        return self._send(key)
+        mode = "\x00"
+        payload = "\x00\x00\x00%s" % base.lenstr64(data)
+        return self._send(self._build_message(mode, payload))
 
     def send_text(self, text):
-        return self._send(text, as_text=True)
+        mode = "\x01"
+        payload = "\x01\x00%s" % base.lenstr64(text)
+        return self._send(self._build_message(mode, payload))
+    
+    def _build_message(self, mode, payload):
+        data = "%s%s%s" % (mode, base.lenstr(self.app_label + ".iapp.samsung"),
+                           base.lenstr(payload))
 
-    def _send(self, data, as_text=False):
-        """send the given payload to the TV"""
-        if self._sock is None:
-            self.connect()
-
-        if as_text:
-            data_payload = "\x01\x00%s" % lenstr64(data)
-            mode = "\x01" #was \x01
-        else:
-            data_payload = "\x00\x00\x00%s" % lenstr64(data)
-            mode = "\x00"
-        data = "%s%s%s" % (mode, lenstr(self.app_label + ".iapp.samsung"),
-                             lenstr(data_payload))
-        try:
-            print "-> %r" % data
-            self._sock.send(data)
-            while True:
-                d = self._sock.recv(2048)
-                print Response(d)
-        except socket.timeout:
-            raise TimeoutError("failed to send data")
-        except socket.error:
-            raise ConnectionError("failed to send data")
-        
-        print("key/text result: %r" % d)
-        return d
-
-
-def list_keys(key=None):
-    """get a list of possible keys with their description"""
-    if key is None:
-        return KEYS
-    else:
-        return dict((k, v) for (k, v) in key.items() if k.startswith(key))
 
 
 class SamsungTV(object):
-    """
-    Remote control for a Samsung TV
-    """
-    def __init__(self, ip, port=55000, app_label="pyremote", model=""):
+    """DEPRECATED Remote control for a Samsung TV"""
+    def __init__(self, host, port=55000, app_label="pyremote", model=""):
         """
         Arguments:
-            ip          ip address of the TV
+            host        ip address of the TV
             port        remote control port (default 55000)
             app_label   name of the remote control app (used for authentication
                         on TV)
@@ -271,9 +129,9 @@ class SamsungTV(object):
         """
         self.app_label = app_label
         self.model = model
-        self.ip = ip
+        self.host = host 
         self.port = port
-        self._local_ip = None
+        self._local_host = None
         self.local_mac = None
         self.get_local_mac()
 
@@ -288,34 +146,34 @@ class SamsungTV(object):
     
     def get_local_mac(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect((self.ip, self.port))
-        self.local_ip = sock.getsockname()[0]
+        sock.connect((self.host, self.port))
+        self.local_host = sock.getsockname()[0]
         sock.close()
     
     def _gen_header(self):
         """generate message header"""
         inner_header = "d\x00%s%s%s" % (
-                lenstr64(self.local_ip), 
-                lenstr64(LOCAL_MAC),
-                lenstr64(self.app_label))
+                base.lenstr64(self.local_host), 
+                base.lenstr64(self._local_mac),
+                base.lenstr64(self.app_label))
         return "\x00%s%s\x00%s\x02\x00\xC8\x00" % (
-                lenstr(self.long_app_string), 
-                lenstr(inner_header), 
-                lenstr(self.long_app_string))
+                base.lenstr(self.long_app_string), 
+                base.lenstr(inner_header), 
+                base.lenstr(self.long_app_string))
 
     def _gen_request(self, text, key=True):
         """generate a request"""
         header = self._gen_header()
         if key:
-            inner_payload = "\x00\x00\x00%s" % (lenstr64(text),)
+            inner_payload = "\x00\x00\x00%s" % (base.lenstr64(text),)
         else:
-            inner_payload = "\x01\x00%s" % (lenstr64(text),)
+            inner_payload = "\x01\x00%s" % (base.lenstr64(text),)
         if key:
-            payload = "\x00%s%s" % (lenstr(self.tv_app_string),
-                                    lenstr(inner_payload))
+            payload = "\x00%s%s" % (base.lenstr(self.tv_app_string),
+                                    base.lenstr(inner_payload))
         else:
-            payload = "\x01%s%s" % (lenstr(self.tv_app_string),
-                                    lenstr(inner_payload))
+            payload = "\x01%s%s" % (base.lenstr(self.tv_app_string),
+                                    base.lenstr(inner_payload))
         return "".join((header, payload))
         
     def send_key(self, key):
@@ -371,7 +229,7 @@ class SamsungTV(object):
     def _send(self, payload):
         """send the given payload to the TV"""
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect((self.ip, self.port))
+        sock.connect((self.host, self.port))
         sock.send(payload)
         print "-> %r" % payload
         response = ""

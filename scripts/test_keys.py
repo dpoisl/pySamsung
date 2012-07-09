@@ -55,7 +55,7 @@ def main():
             ip = raw_input("IP: ")
             device = get_choice("Device Name", devices)
 
-            sd = samsung.Remote("pyremote", ip=ip)
+            sd = samsung.Remote("pyremote", host=ip)
             category = get_choice("Key Category", categories)
             
             keys = data[category]
