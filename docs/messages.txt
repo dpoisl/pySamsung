@@ -1,0 +1,7 @@
+type;data;meaning
+2;\n\x00\x01\x00\x00\x00;Showing TV (sometimes on channel change)
+2;\n\x00\x18\x00\x00\x00;Showing INFO Menu / Channel List / SmartHUB / Guide
+2;\n\x00\x0c\x00\x00\x00;Showing TTX
+2;\n\x00\x02\x00\x00\x00;Showing Menu / Tools Menu / Source Menu / E-Manual / AD/SUBT.
+4;\n\x00\x04\x00\x00\x00;Timeshift startet?
+

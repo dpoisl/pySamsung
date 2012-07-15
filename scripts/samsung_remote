@@ -34,7 +34,7 @@ text (eG usable for password fields, etc.)."""
 
 if __name__ == "__main__":
     (options, args) = parse_options()
-    device = samsung.Remote("pyremote", ip=options.ip, port=options.port)
+    device = samsung.Remote("pyremote", host=options.ip, port=options.port)
     for arg in args:
         if arg.startswith("KEY_"):
             print "%r" % device.send_key(arg)

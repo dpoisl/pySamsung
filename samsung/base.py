@@ -3,7 +3,7 @@
 __version__ = "1.0.0"
 __author__ = "David Poisl <david@poisl.at>"
 
-__all__ = ("lenbytes", "lenstr", "lenstr64", "Connection", "Message")
+__all__ = ("lenbytes", "lenstr", "lenstr64", "Connection", "Response")
 
 
 from base64 import b64encode
@@ -50,7 +50,7 @@ def parse_lenstr(src):
     return src[2:length+2]
 
 
-class Message(object):
+class Response(object):
     """
     A message sent by a samsung device
 
@@ -92,15 +92,15 @@ class Message(object):
 
     def __repr__(self):
         """textual representation"""
-        return "<Message from=%s, type=%x, data=%r>" % (
+        return "<Response from=%s, type=%x, data=%r>" % (
                 self.sender, self.type, self.payload)
 
     
     def __eq__(self, other):
         """compare for equality"""
         if isinstance(other, basestring):
-            return self.__eq__(Message(other))
-        elif isinstance(other, Message):
+            return self.__eq__(Response(other))
+        elif isinstance(other, Response):
             return self.type == other.type and self.payload == other.payload
         else:
             return NotImplemented
@@ -148,8 +148,9 @@ class Connection(object):
         try:
             self._sock.connect((self.host, self.port))
         except socket.error:
-            raise errors.ConnectionError("Couldn't connect to %s:%d" % (
-                self.host, self.port))
+            raise
+            #raise errors.ConnectionError("Couldn't connect to %s:%d" % (
+            #                             self.host, self.port))
         self._local_host = self._sock.getsockname()[0]
         self._local_mac = LOCAL_MAC
 
@@ -161,19 +162,19 @@ class Connection(object):
         try:
             self._sock.send(auth)
             ar = self._sock.recv(2048)
-            auth_response = Message(ar)
+            auth_response = Response(ar)
         except socket.timeout:
-            raise errors.TimeoutError("Timeout in authentication")
+            raise #errors.TimeoutError("Timeout in authentication")
         
-        if auth_response.payload == Message.AUTH_OK:
+        if auth_response.payload == Response.AUTH_OK:
             self._sock.settimeout(recv_timeout)
             return True
-        elif auth_response.payload == Message.AUTH_ACCESS_DENIED:
+        elif auth_response.payload == Response.AUTH_ACCESS_DENIED:
             self._sock.close()
             raise errors.AuthenticationError("access denied by remote device")
-        elif auth_response.payload == Message.AUTH_NEED_CONFIRM:
+        elif auth_response.payload == Response.AUTH_NEED_CONFIRM:
             raise errors.AuthenticationError("please allow this remote on your device")
-        elif auth_response.payload == Message.AUTH_TIMEOUT:
+        elif auth_response.payload == Response.AUTH_TIMEOUT:
             raise errors.AuthenticationError("timeout")
         else:
             print("unknown result: %r" % auth_response)
@@ -192,7 +193,7 @@ class Connection(object):
         else:
             return d
 
-    def _send(self, data):
+    def send(self, data):
         if self._sock is None:
             self.connect(self.auth_timeout, self.recv_timeout)
         try:

@@ -13,15 +13,16 @@ class Matcher(object):
         self._type = type_
         self._payload = payload
 
-    def match(self, message):
-        if self._type is not None and message.type != self.type:
+    def __call__(self, message):
+        if self._type is not None and message.type != self._type:
             return False
         if self._payload is not None and message.payload != self.payload:
             return False
-        return Truea
+        return True
 
 
-class Receiver(base.Connection, threading.Thread):
+
+class ThreadReceiver(base.Connection, threading.Thread):
     def __init__(self, app_label, host, port=55000, auth_timeout=20.0, 
             recv_timeout=2.0, name=None):
         self._listeners = []
@@ -35,22 +36,19 @@ class Receiver(base.Connection, threading.Thread):
         self._listeners.append((matcher, listener))
 
     def run(self):
-        print 1
         self._stopping = False
         self.connect()
         while not self._stopping:
-            print "."
             try:
                 data = self.recv()
             except socket.timeout:
-                d = None
-            if d is None:
                 continue
-            else:
-                msg = base.Message(d)
-                for (matcher, listener) in self._listeners:
-                    if matcher(msg):
-                        listener(msg)
+            
+            msg = base.Response(data)
+            for (matcher, listener) in self._listeners:
+                if matcher(msg):
+                    listener(msg)
+        
         self.disconnect()
         self._stopping = False
 
@@ -59,4 +57,4 @@ class Receiver(base.Connection, threading.Thread):
 
     def join(self, timeout=None):
         self._stopping = True
-        super(Receiver, self).join(timeout)
+        super(ThreadReceiver, self).join(timeout)
