@@ -13,9 +13,8 @@ import uuid
 from . import errors
 
 _mac = "%012x" % uuid.getnode()
-LOCAL_MAC = ":".join((mac[:2], mac[2:4], mac[4:6], mac[6:8], mac[8:10], mac[10:12]))
-#LOCAL_MAC = "00:23:4d:b3:a2:cd" #TODO: get from interface?
-
+LOCAL_MAC = ":".join(_mac[i:i+2] for i in range(0,12,2))
+#TEST: LOCAL_MAC = "00:23:4d:b3:a2:cd"
 
 def lenbytes(string):
     """Return the length of a string as byte string"""
