@@ -3,16 +3,18 @@
 __version__ = "1.0.0"
 __author__ = "David Poisl <david@poisl.at>"
 
-__all__ = ("lenbytes", "lenstr", "lenstr64", "Connection", "Response")
+__all__ = ("lenbytes", "lenstr", "lenstr64", "Connection", "Response", "parse_lenstr")
 
 
 from base64 import b64encode
 import socket
+import uuid
 
 from . import errors
 
-
-LOCAL_MAC = "00:23:4d:b3:a2:cd" #TODO: get from interface?
+_mac = "%012x" % uuid.getnode()
+LOCAL_MAC = ":".join((mac[:2], mac[2:4], mac[4:6], mac[6:8], mac[8:10], mac[10:12]))
+#LOCAL_MAC = "00:23:4d:b3:a2:cd" #TODO: get from interface?
 
 
 def lenbytes(string):
@@ -61,9 +63,10 @@ class Response(object):
     """
     # message types
     TYPE_KEY_CONFIRM = 0x00 # key happened in tv mode
-    TYPE_STATE_CHANGE = 0x02 # seems to be a status update from TV!
+    TYPE_STATE_CHANGE = 0x02 # status update from TV
     TYPE_KEY_IN_MENU = 0x01 # key happened in menu or other modes?
-    
+    TYPE_TIMESHIFT = 0x04 # something with time shift?
+
     # data content: authentication request
     AUTH_OK = "\x64\x00\x01\x00"
     AUTH_ACCESS_DENIED = "\x64\x00\x00\x00"
@@ -73,9 +76,10 @@ class Response(object):
 
     KEY_OK = "\x00\x00\x00\x00" # reponse from key press (always 0x00000000?)
     
-    
-    STATUS_SHOWING_MENU = '\n\x00\x02\x00\x00\x00' #TODO: ?
-    STATUS_SHOWING_TV = '\n\x00\x01\x00\x00\x00' #TODO: ?
+    STATUS_SHOWING_MENU = '\x10\x00\x02\x00\x00\x00'
+    STATUS_SHOWING_TV = '\x10\x00\x01\x00\x00\x00'
+    STATUS_SHOWING_TTX = '\x10\x00\x0c\x00\x00\x00'
+    STATUS_SHOWING_OVERLAY = '\x10\x00\x18\x00\x00\x00'
 
     def __init__(self, data):
         """
@@ -94,7 +98,6 @@ class Response(object):
         """textual representation"""
         return "<Response from=%s, type=%x, data=%r>" % (
                 self.sender, self.type, self.payload)
-
     
     def __eq__(self, other):
         """compare for equality"""

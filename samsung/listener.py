@@ -21,6 +21,32 @@ class Matcher(object):
         return True
 
 
+class IterReceiver(base.Connection):
+    def __init__(self, app_label, host, port=55000, auth_timeout=20.0,
+            recv_timeout=2.0, filter_=lambda x: True):
+        super(IterReceiver, self).__init__(app_label, host, port, auth_timeout, 
+                                           recv_timeout)
+        self.filter = filter_
+        self._connected = False
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if not self._connected:
+            self.connect()
+        while True:
+            try:
+                data = self.recv()
+            except socket.timeout:
+                continue
+
+            msg = base.Response(data)
+            if self.filter(msg):
+                return msg
+
+    next = __next__
+
 
 class ThreadReceiver(base.Connection, threading.Thread):
     def __init__(self, app_label, host, port=55000, auth_timeout=20.0, 
@@ -30,7 +56,6 @@ class ThreadReceiver(base.Connection, threading.Thread):
         base.Connection.__init__(self, app_label, host, port, auth_timeout, 
                 recv_timeout)
         threading.Thread.__init__(self, name=name)
-        print "init done"
 
     def add_listener(self, listener, matcher=Matcher()):
         self._listeners.append((matcher, listener))
@@ -44,7 +69,11 @@ class ThreadReceiver(base.Connection, threading.Thread):
             except socket.timeout:
                 continue
             
-            msg = base.Response(data)
+            try:
+                msg = base.Response(data)
+            except:
+                print("!!! could not parse %r" % data)
+                continue
             for (matcher, listener) in self._listeners:
                 if matcher(msg):
                     listener(msg)
