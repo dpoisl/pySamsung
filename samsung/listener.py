@@ -68,7 +68,9 @@ class ThreadReceiver(base.Connection, threading.Thread):
                 data = self.recv()
             except socket.timeout:
                 continue
-            
+            if data is None:
+                continue
+
             try:
                 msg = base.Response(data)
             except:

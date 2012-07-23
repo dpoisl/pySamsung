@@ -13,20 +13,45 @@ from . import base
 
 class Remote(base.Connection):
     def send_key(self, key):
+        """
+        send a key event to the device
+
+        arguments:
+        key -- key code to send, must start with "KEY_"
+        """
         msg = self._build_message(mode="\x00", 
                                  payload="\x00\x00\x00%s" % base.lenstr64(key))
         return self.send(msg)
 
     def send_text(self, text):
+        """
+        send a text to the device
+
+        texts can only be sent if specific fields are highlighted in the user 
+        interface, eG password and user name fields, search fields, etc.
+
+        arguments:
+        text -- text to send
+        """
         msg = self._build_message(mode="\x01", 
                                   payload="\x01\x00%s" % base.lenstr64(text))
         return self.send(msg)
     
     def _build_message(self, mode, payload):
+        """internal helper - build a message"""
         return "%s%s%s" % (mode, base.lenstr(self.app_label + ".iapp.samsung"),
                            base.lenstr(payload))
 
     def set_channel(self, channel):
+        """
+        switch to a specific channel
+
+        the given channel is padded to 4 digits and theseare sent to the device
+        as single key presses.
+
+        arguments:
+        channel -- channel to switch to (0 .. 9999)
+        """
         map_ = dict((x, "KEY_%d" % x) for x in range(10))
         for digit in "%04d" % channel:
             self.send_key(map_[digit])

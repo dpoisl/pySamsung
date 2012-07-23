@@ -12,7 +12,9 @@ def debug_print(message):
 
 
 if __name__ == "__main__":
-    l = listener.ThreadReceiver("pysamsung", "192.168.1.120")
+    from samsung import base
+    base.set_debug(True)
+    l = listener.ThreadReceiver("pyremote", "192.168.1.120")
     l.add_listener(debug_print)
     l.start()
     try:

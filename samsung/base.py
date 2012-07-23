@@ -3,7 +3,8 @@
 __version__ = "1.0.0"
 __author__ = "David Poisl <david@poisl.at>"
 
-__all__ = ("lenbytes", "lenstr", "lenstr64", "Connection", "Response", "parse_lenstr")
+__all__ = ("lenstr", "lenstr64", "Connection", "Response", 
+           "parse_lenstr")
 
 
 from base64 import b64encode
@@ -12,16 +13,26 @@ import uuid
 
 from . import errors
 
+_logger = None
 _mac = "%012x" % uuid.getnode()
-LOCAL_MAC = ":".join(_mac[i:i+2] for i in range(0,12,2))
-#TEST: LOCAL_MAC = "00:23:4d:b3:a2:cd"
+LOCAL_MAC = ":".join(_mac[i:i + 2] for i in range(0, 12, 2))
 
-def lenbytes(string):
-    """Return the length of a string as byte string"""
-    length = len(string)
-    if length > 256 * 256:
-        raise ValueError("String too long")
-    return chr(length % 256) + chr(length / 256)
+
+def set_debug(active=True):
+    """activate debug messages"""
+    global _logger
+    if active:
+        import logging
+        logging.basicConfig(level=logging.DEBUG)
+        _logger = logging.getLogger("samsung.base")
+    else:
+        _logger = None
+
+
+def _debug(*args):
+    """print a debug message"""
+    if _logger:
+        _logger.debug(*args)
 
 
 def lenstr(string):
@@ -31,7 +42,10 @@ def lenstr(string):
     samsung strings contain the length as integer, a 0 byte and then
     the original string
     """
-    return "%s%s" % (lenbytes(string), string)
+    length = len(string)
+    if length > 256 * 256:
+        raise ValueError("String too long")
+    return chr(length % 256) + chr(length / 256) + string
 
 
 def lenstr64(string):
@@ -48,7 +62,10 @@ def parse_lenstr(src):
     these strings.
     """
     length = ord(src[0]) + ord(src[1]) * 256
-    return src[2:length+2]
+    data = src[2:length + 2]
+    if len(data) < length:
+        raise ValueError("missing %d bytes in %r" % (length, src))
+    return (src[2:length + 2], src[length+2:])
 
 
 class Response(object):
@@ -85,13 +102,17 @@ class Response(object):
         constructor
         
         parse a message from a samsung device
-
+        
+        arguments:
         data -- binary data the device sent
         """
         self.type = ord(data[0])
-        self.sender = parse_lenstr(data[1:])
-        self.payload = parse_lenstr(data[len(self.sender) + 3:])
+        (self.sender, remaining) = parse_lenstr(data[1:])
+        (self.payload, remaining) = parse_lenstr(remaining)
         self._raw_data = data
+        if len(remaining):
+            raise ValueError("Parser error: message %r, remaining data: %r" % (
+                             data, remaining))
 
     def __repr__(self):
         """textual representation"""
@@ -133,72 +154,106 @@ class Connection(object):
         recv_timeout -- timeout for message polling in seconds. (default: 2.0,
                         None = no timeout)
         """
-        self.host = host
-        self.port = port
+        self._sockargs = (host, port)
         self.app_label = app_label
-        self._local_host = None
         self._sock = None
-        self._local_mac = None
         self.auth_timeout = auth_timeout
         self.recv_timeout = recv_timeout
         super(Connection, self).__init__()
 
     def connect(self, auth_timeout=20.0, recv_timeout=2.0):
         """connect to the device"""
+        _debug("Connecting to %s:%d", self._sockargs[0], 
+                     self._sockargs[1])
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._sock.settimeout(auth_timeout)
         try:
-            self._sock.connect((self.host, self.port))
+            self._sock.connect(self._sockargs)
         except socket.error:
             raise
-            #raise errors.ConnectionError("Couldn't connect to %s:%d" % (
-            #                             self.host, self.port))
-        self._local_host = self._sock.getsockname()[0]
-        self._local_mac = LOCAL_MAC
-
-        auth_content = "\x64\x00%s%s%s" % (lenstr64(self._local_host),
-                                           lenstr64(self._local_mac),
+        
+        socket_name = self._sock.getsockname()[0]
+        auth_content = "\x64\x00%s%s%s" % (lenstr64(socket_name),
+                                           lenstr64(LOCAL_MAC),
                                            lenstr64(self.app_label))
         auth = "\x00%s%s" % (lenstr(self.app_label + ".iapp.samsung"), 
                              lenstr(auth_content))
-        try:
-            self._sock.send(auth)
-            ar = self._sock.recv(2048)
-            auth_response = Response(ar)
-        except socket.timeout:
-            raise #errors.TimeoutError("Timeout in authentication")
         
-        if auth_response.payload == Response.AUTH_OK:
-            self._sock.settimeout(recv_timeout)
+        _debug("-> %r", auth)
+        self._sock.send(auth)
+        response = self.recv()
+        status = self._parse_auth_response(response)
+    
+        if status is None:
+            try:
+                _debug("AUTH WAIT")
+                response = self.recv()
+            except socket.timeout:
+                raise errors.AuthenticationError("timeout in authentication")
+            status = self._parse_auth_response(response)
+            _debug("2nd AUTH RESPONSE: %r", status)
+
+        if status:
+            _debug("OK")
             return True
-        elif auth_response.payload == Response.AUTH_ACCESS_DENIED:
-            self._sock.close()
+        else:
+            _debug("ERROR")
             raise errors.AuthenticationError("access denied by remote device")
-        elif auth_response.payload == Response.AUTH_NEED_CONFIRM:
-            raise errors.AuthenticationError("please allow this remote on your device")
-        elif auth_response.payload == Response.AUTH_TIMEOUT:
+
+    def _parse_auth_response(self, response):
+        if response is None:
+            return None
+        parsed = Response(response)
+        if parsed.payload == Response.AUTH_OK:
+            _debug("Message is OK")
+            self._sock.settimeout(self.recv_timeout)
+            return True
+        elif parsed.payload == Response.AUTH_ACCESS_DENIED:
+            _debug("Message is 'access denied'")
+            self._sock.close()
+            return False
+        elif parsed.payload == Response.AUTH_NEED_CONFIRM:
+            _debug("Message is 'need confirmation'")
+            return False
+        elif parsed.payload == Response.AUTH_TIMEOUT:
+            _debug("Message is 'timeout'")
             raise errors.AuthenticationError("timeout")
         else:
-            print("unknown result: %r" % auth_response)
-    
+            _debug("message is unknown")
+            raise ValueError("unknown auth response: %r" % parsed)
+
     def disconnect(self):
+        """disconnect socket"""
         self._sock.close()
         self._sock = None
     
     def recv(self):
+        """recieve data"""
         try:
-            d = self._sock.recv(2048)
+            data = self._sock.recv(2048)
+            if len(data) == 0:
+                return None
+            _debug("<- %r  (timeout: %r", data, self._sock.gettimeout())
+            return data
         except socket.error:
             raise
         except socket.timeout:
             return None
-        else:
-            return d
 
     def send(self, data):
+        """
+        send raw data to remote device
+
+        if the connection to the remote device is not established,
+        self.connect is called before sending th data.
+
+        data -- binary data to send
+        """
         if self._sock is None:
+            _debug("need to connect first")
             self.connect(self.auth_timeout, self.recv_timeout)
         try:
+            _debug("-> %r", data)
             return self._sock.send(data)
         except socket.timeout:
             raise errors.TimeoutError("failed to send data")
