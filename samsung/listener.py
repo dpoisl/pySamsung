@@ -84,8 +84,10 @@ class ThreadReceiver(base.Connection, threading.Thread):
         self._stopping = False
 
     def stop(self):
+        print "stopping"
         self._stopping = True
 
     def join(self, timeout=None):
+        print "joining"
         self._stopping = True
         super(ThreadReceiver, self).join(timeout)

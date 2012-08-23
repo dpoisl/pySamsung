@@ -20,3 +20,7 @@ class ConnectionError(socket.error):
 class TimeoutError(socket.timeout):
     """communication timeout"""
     pass
+
+class DisconnectedError(socket.timeout):
+    """we got thrown out"""
+    pass

@@ -18,13 +18,13 @@ _mac = "%012x" % uuid.getnode()
 LOCAL_MAC = ":".join(_mac[i:i + 2] for i in range(0, 12, 2))
 
 
-def set_debug(active=True):
+def set_debug(active=True, basename="samsung.base"):
     """activate debug messages"""
     global _logger
     if active:
         import logging
         logging.basicConfig(level=logging.DEBUG)
-        _logger = logging.getLogger("samsung.base")
+        _logger = logging.getLogger(basename)
     else:
         _logger = None
 
@@ -162,16 +162,21 @@ class Connection(object):
         super(Connection, self).__init__()
 
     def connect(self, auth_timeout=20.0, recv_timeout=2.0):
+        self._connect()
+        self._authenticate()
+    
+    def _connect(self):
         """connect to the device"""
         _debug("Connecting to %s:%d", self._sockargs[0], 
                      self._sockargs[1])
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._sock.settimeout(auth_timeout)
+        self._sock.settimeout(self.auth_timeout)
         try:
             self._sock.connect(self._sockargs)
         except socket.error:
             raise
-        
+
+    def _authenticate(self):
         socket_name = self._sock.getsockname()[0]
         auth_content = "\x64\x00%s%s%s" % (lenstr64(socket_name),
                                            lenstr64(LOCAL_MAC),
@@ -182,31 +187,46 @@ class Connection(object):
         _debug("-> %r", auth)
         self._sock.send(auth)
         response = self.recv()
+        _debug("AUTH1 Response: %r" % response)
         status = self._parse_auth_response(response)
     
         if status is None:
             try:
-                _debug("AUTH WAIT")
+                _debug("AUTH2 WAIT")
                 response = self.recv()
+                _debug("AUTH2 Response: %r" % response)
             except socket.timeout:
+                self._sock.close()
+                self._sock = None
                 raise errors.AuthenticationError("timeout in authentication")
-            status = self._parse_auth_response(response)
-            _debug("2nd AUTH RESPONSE: %r", status)
+            else:
+                status = self._parse_auth_response(response)
+                _debug("2nd AUTH RESPONSE: %r", status)
 
         if status:
             _debug("OK")
+            self._sock.settimeout(self.recv_timeout)
             return True
         else:
             _debug("ERROR")
             raise errors.AuthenticationError("access denied by remote device")
 
     def _parse_auth_response(self, response):
+        """
+        parse authentication response
+    
+        arguments:
+        response -- authentication response as string
+
+        Returns None if no response was received, True if the autentication
+        was successfull and False if it failed.
+        """
         if response is None:
+            _debug("got no response")
             return None
         parsed = Response(response)
         if parsed.payload == Response.AUTH_OK:
             _debug("Message is OK")
-            self._sock.settimeout(self.recv_timeout)
             return True
         elif parsed.payload == Response.AUTH_ACCESS_DENIED:
             _debug("Message is 'access denied'")
@@ -214,7 +234,7 @@ class Connection(object):
             return False
         elif parsed.payload == Response.AUTH_NEED_CONFIRM:
             _debug("Message is 'need confirmation'")
-            return False
+            return None
         elif parsed.payload == Response.AUTH_TIMEOUT:
             _debug("Message is 'timeout'")
             raise errors.AuthenticationError("timeout")
@@ -232,7 +252,7 @@ class Connection(object):
         try:
             data = self._sock.recv(2048)
             if len(data) == 0:
-                return None
+                raise errors.TimeoutError("we got thrown out?")
             _debug("<- %r  (timeout: %r", data, self._sock.gettimeout())
             return data
         except socket.error:
