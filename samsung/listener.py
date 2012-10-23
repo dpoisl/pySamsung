@@ -4,6 +4,7 @@ __author__ = "David Poisl <david@poisl.at>"
 
 import threading
 import socket
+import time
 from . import errors 
 from . import base
 
@@ -40,7 +41,6 @@ class IterReceiver(base.Connection):
                 data = self.recv()
             except socket.timeout:
                 continue
-
             msg = base.Response(data)
             if self.filter(msg):
                 return msg

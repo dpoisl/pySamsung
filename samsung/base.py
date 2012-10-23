@@ -19,7 +19,17 @@ LOCAL_MAC = ":".join(_mac[i:i + 2] for i in range(0, 12, 2))
 
 
 def set_debug(active=True, basename="samsung.base"):
-    """activate debug messages"""
+    """
+    activate debug messages
+    
+    sets the global _logger either to None if active is false
+    or to a logging.Logger instance with the given name. This
+    enables or disables logging of debug messages.
+
+    arguments:
+    active -- boolean, set logging on or off
+    basename -- string, name for logger instance
+    """
     global _logger
     if active:
         import logging
@@ -27,10 +37,17 @@ def set_debug(active=True, basename="samsung.base"):
         _logger = logging.getLogger(basename)
     else:
         _logger = None
-
+    return _logger
 
 def _debug(*args):
-    """print a debug message"""
+    """
+    print a debug message
+    
+    if logging is activated via set_debug the given message will
+    be logged via _logger, else nothing happens.
+
+    usage: see logging.Logger.debug(*args)
+    """
     if _logger:
         _logger.debug(*args)
 
@@ -41,6 +58,9 @@ def lenstr(string):
     
     samsung strings contain the length as integer, a 0 byte and then
     the original string
+    
+    arguments:
+    string -- string or unicode instance
     """
     length = len(string)
     if length > 256 * 256:
@@ -60,6 +80,11 @@ def parse_lenstr(src):
     Samsung devices send strings with the length as the first two bytes 
     (little endian). This function can be used to get the content from
     these strings.
+
+    arguments:
+    src -- bytes or string
+
+    Returns the parsed lenstr and the remaining data
     """
     length = ord(src[0]) + ord(src[1]) * 256
     data = src[2:length + 2]
@@ -80,15 +105,16 @@ class Response(object):
     # message types
     TYPE_KEY_CONFIRM = 0x00 # key happened in tv mode
     TYPE_STATE_CHANGE = 0x02 # status update from TV
-    TYPE_KEY_IN_MENU = 0x01 # key happened in menu or other modes?
+    TYPE_KEY_CONFIRM_MENU = 0x01 # key happened in menu or other modes?
     TYPE_TIMESHIFT = 0x04 # something with time shift?
+    TYPES_KEY_ACCEPTED = (TYPE_KEY_CONFIRM, TYPE_KEY_CONFIRM_MENU)
 
     # data content: authentication request
-    AUTH_OK = "\x64\x00\x01\x00"
-    AUTH_ACCESS_DENIED = "\x64\x00\x00\x00"
+    AUTH_OK = "\x64\x00\x01\x00" # success
+    AUTH_ACCESS_DENIED = "\x64\x00\x00\x00" # denied
     #TODO: if AUTH_NEED_CONFIRM, will OK or denied be sent later?
-    AUTH_NEED_CONFIRM = "\x0a\x00\x02\x00\x00\x00" 
-    AUTH_TIMEOUT = "\x64\x00"
+    AUTH_NEED_CONFIRM = "\x0a\x00\x02\x00\x00\x00" # need confirmation
+    AUTH_TIMEOUT = "\x64\x00" # timeout
 
     KEY_OK = "\x00\x00\x00\x00" # reponse from key press (always 0x00000000?)
     
@@ -127,6 +153,10 @@ class Response(object):
             return self.type == other.type and self.payload == other.payload
         else:
             return NotImplemented
+    
+    def __str__(self):
+        """string representation"""
+        return "%x:%r" % (self.type, self.payload)
 
     def __ne__(self, other):
         return not self.__eq__(self, other)
@@ -160,8 +190,14 @@ class Connection(object):
         self.auth_timeout = auth_timeout
         self.recv_timeout = recv_timeout
         super(Connection, self).__init__()
-
-    def connect(self, auth_timeout=20.0, recv_timeout=2.0):
+    
+    def __repr__(self):
+        return "%s(%r, %r, %r, %r, %r)" % (self.__class__.__name__, 
+                                           self.app_label, self._sockargs[0],
+                                           self._sockargs[1], self.auth_timeout,
+                                           self.recv_timeout)
+    
+    def connect(self):
         self._connect()
         self._authenticate()
     
@@ -177,6 +213,7 @@ class Connection(object):
             raise
 
     def _authenticate(self):
+        """authenticate with samsung device"""
         socket_name = self._sock.getsockname()[0]
         auth_content = "\x64\x00%s%s%s" % (lenstr64(socket_name),
                                            lenstr64(LOCAL_MAC),
@@ -202,7 +239,6 @@ class Connection(object):
             else:
                 status = self._parse_auth_response(response)
                 _debug("2nd AUTH RESPONSE: %r", status)
-
         if status:
             _debug("OK")
             self._sock.settimeout(self.recv_timeout)

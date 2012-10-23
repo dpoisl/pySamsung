@@ -7,6 +7,7 @@ __author__ = "David Poisl <david@poisl.at>"
 
 import socket
 
+
 class AuthenticationError(Exception):
     """app is not authenticated"""
     pass
@@ -20,6 +21,7 @@ class ConnectionError(socket.error):
 class TimeoutError(socket.timeout):
     """communication timeout"""
     pass
+
 
 class DisconnectedError(socket.timeout):
     """we got thrown out"""
