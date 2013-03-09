@@ -44,4 +44,7 @@ if __name__ == "__main__":
         else:
             print "%r" % device.send_text(arg)
         time.sleep(options.delay)
+        print "%r" % samsung.Response(device.recv())
+        print "%r" % samsung.Response(device.recv())
+        print "%r" % samsung.Response(device.recv())
     device.disconnect()

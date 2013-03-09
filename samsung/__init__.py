@@ -11,4 +11,5 @@ Modules in this package:
 __version__ = "0.1.0"
 __author__ = "David Poisl <david@poisl.at>"
 
-from .remote import *
+from .remote import Remote
+from .base import Response

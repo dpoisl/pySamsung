@@ -3,15 +3,12 @@
 __version__ = "1.0.0"
 __author__ = "David Poisl <david@poisl.at>"
 
-__all__ = ("lenstr", "lenstr64", "Connection", "Response", 
-           "parse_lenstr")
+__all__ = ("lenstr", "lenstr64", "SmartTV", "Response", "parse_lenstr")
 
 
 from base64 import b64encode
 import socket
 import uuid
-
-from . import errors
 
 _logger = None
 _mac = "%012x" % uuid.getnode()
@@ -39,7 +36,7 @@ def set_debug(active=True, basename="samsung.base"):
         _logger = None
     return _logger
 
-def _debug(*args):
+def _debug(*args, **kwargs):
     """
     print a debug message
     
@@ -49,7 +46,7 @@ def _debug(*args):
     usage: see logging.Logger.debug(*args)
     """
     if _logger:
-        _logger.debug(*args)
+        _logger.debug(*args, **kwargs)
 
 
 def lenstr(string):
@@ -91,6 +88,26 @@ def parse_lenstr(src):
     if len(data) < length:
         raise ValueError("missing %d bytes in %r" % (length, src))
     return (src[2:length + 2], src[length+2:])
+
+
+class AuthenticationError(Exception):
+    """app is not authenticated"""
+    pass
+
+
+class ConnectionError(socket.error):
+    """couldn't connect to device"""
+    pass
+
+
+class TimeoutError(socket.timeout):
+    """communication timeout"""
+    pass
+
+
+class DisconnectedError(socket.timeout):
+    """we got thrown out"""
+    pass
 
 
 class Response(object):
@@ -159,15 +176,16 @@ class Response(object):
         return "%x:%r" % (self.type, self.payload)
 
     def __ne__(self, other):
-        return not self.__eq__(self, other)
+        return not self.__eq__(other)
 
 
-class Connection(object):
+class SmartTV(object):
     """
-    connector for samsung devices
+    connector for samsung SmartTV devices
 
     provides basic functionality like authentication, receiving and
-    sending data.
+    sending data. as well as higher level functionality like sending
+    key codes or strings (eG for text input fields).
     """
     def __init__(self, app_label, host, port=55000, auth_timeout=20.0, 
             recv_timeout=2.0):
@@ -189,8 +207,8 @@ class Connection(object):
         self._sock = None
         self.auth_timeout = auth_timeout
         self.recv_timeout = recv_timeout
-        super(Connection, self).__init__()
-    
+        self._auth_tries = 3
+
     def __repr__(self):
         return "%s(%r, %r, %r, %r, %r)" % (self.__class__.__name__, 
                                            self.app_label, self._sockargs[0],
@@ -198,6 +216,7 @@ class Connection(object):
                                            self.recv_timeout)
     
     def connect(self):
+        """connect to device and authenticate"""
         self._connect()
         self._authenticate()
     
@@ -223,11 +242,9 @@ class Connection(object):
         
         _debug("-> %r", auth)
         self._sock.send(auth)
-        response = self.recv()
-        _debug("AUTH1 Response: %r" % response)
-        status = self._parse_auth_response(response)
-    
-        if status is None:
+        status = None
+
+        for i in range(self._auth_tries):
             try:
                 _debug("AUTH2 WAIT")
                 response = self.recv()
@@ -235,7 +252,7 @@ class Connection(object):
             except socket.timeout:
                 self._sock.close()
                 self._sock = None
-                raise errors.AuthenticationError("timeout in authentication")
+                continue
             else:
                 status = self._parse_auth_response(response)
                 _debug("2nd AUTH RESPONSE: %r", status)
@@ -245,7 +262,7 @@ class Connection(object):
             return True
         else:
             _debug("ERROR")
-            raise errors.AuthenticationError("access denied by remote device")
+            raise AuthenticationError("access denied by remote device")
 
     def _parse_auth_response(self, response):
         """
@@ -254,28 +271,29 @@ class Connection(object):
         arguments:
         response -- authentication response as string
 
-        Returns None if no response was received, True if the autentication
-        was successfull and False if it failed.
+        Returns None if no response was received or the applicatoin
+        should wait, True if the autentication was successfull and False 
+        if it failed.
         """
         if response is None:
             _debug("got no response")
             return None
         parsed = Response(response)
         if parsed.payload == Response.AUTH_OK:
-            _debug("Message is OK")
+            _debug("Authentication successfull")
             return True
         elif parsed.payload == Response.AUTH_ACCESS_DENIED:
-            _debug("Message is 'access denied'")
+            _debug("Authentication response: Access Denied")
             self._sock.close()
             return False
         elif parsed.payload == Response.AUTH_NEED_CONFIRM:
-            _debug("Message is 'need confirmation'")
+            _debug("Authentication response: waiting for confirmation on device")
             return None
         elif parsed.payload == Response.AUTH_TIMEOUT:
-            _debug("Message is 'timeout'")
-            raise errors.AuthenticationError("timeout")
+            _debug("Authentication response: Timeout")
+            raise AuthenticationError("timeout")
         else:
-            _debug("message is unknown")
+            _debug("Unknown authentication response")
             raise ValueError("unknown auth response: %r" % parsed)
 
     def disconnect(self):
@@ -288,7 +306,7 @@ class Connection(object):
         try:
             data = self._sock.recv(2048)
             if len(data) == 0:
-                raise errors.TimeoutError("we got thrown out?")
+                raise TimeoutError("we got thrown out?")
             _debug("<- %r  (timeout: %r", data, self._sock.gettimeout())
             return data
         except socket.error:
@@ -306,12 +324,55 @@ class Connection(object):
         data -- binary data to send
         """
         if self._sock is None:
-            _debug("need to connect first")
-            self.connect(self.auth_timeout, self.recv_timeout)
+            self.connect()
         try:
             _debug("-> %r", data)
             return self._sock.send(data)
         except socket.timeout:
-            raise errors.TimeoutError("failed to send data")
+            raise TimeoutError("failed to send data")
         except socket.error:
-            raise errors.ConnectionError("failed to send data")
+            raise ConnectionError("failed to send data")
+    
+    def send_key(self, key):
+        """
+        send a key event to the device
+
+        arguments:
+        key -- key code to send, must start with "KEY_"
+        """
+        msg = self._build_message(mode="\x00", 
+                                  payload="\x00\x00\x00%s" % lenstr64(key))
+        return self.send(msg)
+
+    def send_text(self, text):
+        """
+        send a text to the device
+
+        texts can only be sent if specific fields are highlighted in the user 
+        interface, eG password and user name fields, search fields, etc.
+
+        arguments:
+        text -- text to send
+        """
+        msg = self._build_message(mode="\x01", 
+                                  payload="\x01\x00%s" % lenstr64(text))
+        return self.send(msg)
+    
+    def _build_message(self, mode, payload):
+        """internal helper - build a message"""
+        return "%s%s%s" % (mode, lenstr(self.app_label + ".iapp.samsung"),
+                           lenstr(payload))
+
+    def set_channel(self, channel):
+        """
+        switch to a specific channel
+
+        the given channel is padded to 4 digits and theseare sent to the device
+        as single key presses.
+
+        arguments:
+        channel -- channel to switch to (0 .. 9999)
+        """
+        map_ = dict((x, "KEY_%d" % x) for x in range(10))
+        for digit in "%04d" % channel:
+            self.send_key(map_[digit])
