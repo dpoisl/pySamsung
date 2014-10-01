@@ -244,4 +244,3 @@ Other | KEY_STILL_PICTURE |
 Other | KEY_FM_RADIO | 
 Other | KEY_AUTO_FORMAT | 
 Other | KEY_4_3 | 
-
