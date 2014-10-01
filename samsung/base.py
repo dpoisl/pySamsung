@@ -205,7 +205,7 @@ class Message(object):
         return "Message(sender=%s, type_=%x, payload=%r)" % (self.sender,
                                                              self.type,
                                                              self.payload)
-    
+
     def __eq__(self, other):
         """
         compare for equality
