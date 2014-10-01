@@ -2,18 +2,19 @@
 
 from distutils.core import setup
 
-readme = open("README.md")
+with open("README.md") as readme:
+    description = readme.read()
 
 setup(name="samsung", 
       version="0.1.0",
       description='network remote library for Samsung C, D and E-Series devices',
-      long_description=readme.read(),
+      long_description=description,
       author='David Poisl',
       author_email='david@poisl.at',
       url='https://github.com/dpoisl/pySamsung/',
       platforms=("any",),
       packages=('samsung',),
-      scripts=("scripts/samsung_remote",),
+      scripts=("scripts/sstv_remote", "scripts/sstv_listener"),
       classifiers=("Development Status :: 3 - Alpha",
                    "Intended Audience :: Developers",
                    "Programming Language :: Python",
@@ -25,5 +26,3 @@ setup(name="samsung",
                    "Topic :: Internet",
                    )
      )
-
-readme.close()

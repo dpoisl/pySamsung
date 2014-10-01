@@ -1,3 +1,4 @@
-include scripts/samsung_remote
+include scripts/sstv_remote
+include scripts/sstv_listener
 recursive_include samsung *.py
 include README.md
