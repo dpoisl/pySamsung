@@ -149,11 +149,13 @@ def parse_sstv_string(data):
     :return: the parsed string and potentially remaining data
     :rtype: tuple
     """
+    _log(logging.DEBUG, "Parsing sstv_string %r", data)
     length = ord(data[0]) + ord(data[1]) * 256
-    data = data[2:length + 2]
-    if len(data) < length:
+    if len(data) < length + 2:
         raise ValueError("missing %d bytes in %r" % (length, data))
-    return data[2:length + 2], data[length+2:]
+    _log(logging.DEBUG, "Length %d, payload %r, remainder %r",
+         length, data[2:length + 2], data[length + 2:])
+    return data[2:length + 2], data[length + 2:]
 
 
 class AuthenticationError(Exception):
@@ -306,7 +308,7 @@ class SmartTV(object):
                                            sstv_base64(self.app_label))
         auth = "\x00%s%s" % (sstv_string(self.app_label + ".iapp.samsung"),
                              sstv_string(auth_content))
-        _log(logging.DEBUG, "-> %r", auth)
+        _log(logging.DEBUG, "sending %r", auth)
         self._sock.send(auth)
         status = None
 
@@ -316,16 +318,14 @@ class SmartTV(object):
                 response = self.recv()
                 _log(logging.DEBUG, "AUTH2 Response: %r" % response)
             except socket.timeout:
-                self._sock.close()
-                self._sock = None
-                continue
+                _log(logging.DEBUG, "AUTH2 timeout")
             else:
                 status = self._parse_auth_response(response)
                 _log(logging.DEBUG, "2nd AUTH RESPONSE: %r", status)
-        if status:
-            _log(logging.DEBUG, "OK")
-            self._sock.settimeout(self._recv_timeout)
-            return True
+            if status:
+                _log(logging.DEBUG, "OK")
+                self._sock.settimeout(self._recv_timeout)
+                return True
         else:
             _log(logging.DEBUG, "ERROR")
             raise AuthenticationError("access denied by remote device")
@@ -385,13 +385,16 @@ class SmartTV(object):
             data = self._sock.recv(2048)
             if len(data) == 0:
                 raise socket.timeout("Received 0 bytes -- disconnected?")
-            _log(logging.DEBUG, "<- %r  (timeout: %r", data,
-                 self._sock.gettimeout())
-            return data
+
         except socket.timeout:
-            return None
+            _log(logging.DEBUG, "received nothing")
+            raise
         except socket.error:
             raise
+        else:
+            _log(logging.DEBUG, "received %r  (timeout: %r)", data,
+                 self._sock.gettimeout())
+        return data
 
     def send(self, data):
         """
@@ -408,7 +411,7 @@ class SmartTV(object):
         if self._sock is None:
             self.connect()
         try:
-            _log(logging.DEBUG, "-> %r", data)
+            _log(logging.DEBUG, "sending %r", data)
             return self._sock.send(data)
         except socket.timeout:
             _log(logging.warning, "Timeout when sending")

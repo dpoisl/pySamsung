@@ -1,10 +1,11 @@
 #!/usr/bin/python
 
 
-from samsung import listener
+from samsung import listener, base
 import datetime
 from time import sleep
 
+base.set_logging(True)
 
 def debug_print(message):
     """
