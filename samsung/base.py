@@ -203,8 +203,8 @@ class Message(object):
     def __repr__(self):
         """textual representation"""
         return "Message(sender=%s, type_=%x, payload=%r)" % (self.sender,
-                                                              self.type,
-                                                              self.payload)
+                                                             self.type,
+                                                             self.payload)
     
     def __eq__(self, other):
         """
@@ -456,7 +456,7 @@ class SmartTV(object):
         return "%s%s%s" % (mode, sstv_string(self.app_label + ".iapp.samsung"),
                            sstv_string(payload))
 
-    def set_channel(self, channel, delay=None):
+    def set_channel(self, channel, delay=0.1):
         """
         switch to a specific channel
 
@@ -464,7 +464,7 @@ class SmartTV(object):
         as single key presses.
 
         :param int channel: channel to switch to (0 .. 9999)
-        :param float delay: optional delay between key presses sent
+        :param float delay: delay between key presses sent
         """
         map_ = dict((str(x), "KEY_%d" % x) for x in range(10))
         for digit in "%04d" % channel:
