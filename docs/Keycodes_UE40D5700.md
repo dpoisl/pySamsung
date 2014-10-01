@@ -1,73 +1,73 @@
 Category | Key   | Effect
 -------- | ----- | -------
-Channel | KEY_CHUP | 
+Channel | KEY_CHUP | channel up
 Channel | KEY_FAVCH | 
-Channel | KEY_CHDOWN | 
+Channel | KEY_CHDOWN | channel down
 Channel | KEY_CH_LIST | 
-Channel | KEY_PRECH | 
-Keypad | KEY_0 | 
-Keypad | KEY_1 | 
+Channel | KEY_PRECH | previous channel
+Keypad | KEY_0 | keypad 0
+Keypad | KEY_1 | keypad 1
 Keypad | KEY_11 | 
 Keypad | KEY_12 | 
-Keypad | KEY_2 | 
-Keypad | KEY_3 | 
-Keypad | KEY_4 | 
-Keypad | KEY_5 | 
-Keypad | KEY_6 | 
-Keypad | KEY_7 | 
-Keypad | KEY_8 | 
-Keypad | KEY_9 | 
-Menu | KEY_EXIT | 
-Menu | KEY_LEFT | 
-Menu | KEY_MENU | 
-Menu | KEY_RETURN | 
-Menu | KEY_RIGHT | 
-Menu | KEY_TOOLS | 
-Menu | KEY_TOPMENU | 
-Menu | KEY_UP | 
+Keypad | KEY_2 | keypad 2
+Keypad | KEY_3 | keypad 3
+Keypad | KEY_4 | keypad 4
+Keypad | KEY_5 | keypad 5
+Keypad | KEY_6 | keypad 6
+Keypad | KEY_7 | keypad 7
+Keypad | KEY_8 | keypad 8
+Keypad | KEY_9 | keypad 9
+Menu | KEY_EXIT | exit all menus
+Menu | KEY_LEFT | cursor left
+Menu | KEY_MENU | open/close menu
+Menu | KEY_RETURN | return to previous menu
+Menu | KEY_RIGHT | cursor right
+Menu | KEY_TOOLS | tools menu
+Menu | KEY_TOPMENU | e-manual
+Menu | KEY_UP | cursor up
 PIP | KEY_PIP_SWAP | 
 PIP | KEY_PIP_SCAN | 
 PIP | KEY_PIP_ONOFF | 
 PIP | KEY_PIP_CHDOWN | 
-PIP | KEY_PIP_CHUP | 
+PIP | KEY_PIP_CHUP | displays "n/a"
 PIP | KEY_PIP_SIZE | 
-Playback | KEY_STOP | 
+Playback | KEY_STOP | stop playback
 Playback | KEY_FF_ | 
 Playback | KEY_REWIND_ | 
-Playback | KEY_PLAY | 
+Playback | KEY_PLAY | start/continue playback
 Playback | KEY_FF | 
 Playback | KEY_REWIND | 
 Playback | KEY_REC | 
-Playback | KEY_PAUSE | 
+Playback | KEY_PAUSE | pause playback
 Power | KEY_POWER | 
-Power | KEY_POWEROFF | 
+Power | KEY_POWEROFF | power off
 Power | KEY_POWERON | 
-Source | KEY_SVIDEO3 | 
-Source | KEY_ANTENA | 
-Source | KEY_AV1 | 
-Source | KEY_AV2 | 
-Source | KEY_AV3 | 
+Source | KEY_SVIDEO3 | switch to input SVIDEO-3
+Source | KEY_ANTENA | switch to DVB-T
+Source | KEY_AV1 | switch to input AV-1
+Source | KEY_AV2 | switch to input AV-2
+Source | KEY_AV3 | switch to input AV-3
 Source | KEY_TV | 
-Source | KEY_HDMI2 | 
+Source | KEY_HDMI2 | switch to input HDMI-2
 Source | KEY_TV_MODE | 
-Source | KEY_COMPONENT1 | 
-Source | KEY_SVIDEO2 | 
-Source | KEY_SVIDEO1 | 
-Source | KEY_COMPONENT2 | 
-Source | KEY_HDMI4 | 
-Source | KEY_HDMI3 | 
-Source | KEY_HDMI | 
-Source | KEY_HDMI1 | 
-Source | KEY_SOURCE | 
-TTX | KEY_CYAN | 
-TTX | KEY_GREEN | 
-TTX | KEY_RED | 
+Source | KEY_COMPONENT1 | switch to input COMPONENT-1
+Source | KEY_SVIDEO2 | switch to input SVIDEO-2
+Source | KEY_SVIDEO1 | switch to input SVIDEO-1
+Source | KEY_COMPONENT2 | switch to input COMPONENT-2
+Source | KEY_HDMI4 | switch to input HDMI-4
+Source | KEY_HDMI3 | switch to input HDMI-3
+Source | KEY_HDMI | switch to last used HDMI input
+Source | KEY_HDMI1 | switch to input HDMI-1
+Source | KEY_SOURCE | menu "input source"
+TTX | KEY_CYAN | cyan / C
+TTX | KEY_GREEN | green / B
+TTX | KEY_RED | red / A
 TTX | KEY_TTX_SUBFACE | 
-TTX | KEY_YELLOW | 
+TTX | KEY_YELLOW | yellow / C
 TTX | KEY_TTX_MIX | 
-Volume | KEY_MUTE | 
-Volume | KEY_VOLDOWN | 
-Volume | KEY_VOLUP | 
+Volume | KEY_MUTE | mute volume
+Volume | KEY_VOLDOWN | volume down
+Volume | KEY_VOLUP | volume up
 Zoom | KEY_ZOOM_IN | 
 Zoom | KEY_ZOOM_MOVE | 
 Zoom | KEY_ZOOM_OUT | 
@@ -151,19 +151,19 @@ Pannel | KEY_PANNEL_VOLDOW |
 Pannel | KEY_PANNEL_VOLUP | 
 Pannel | KEY_WHEEL_LEFT | 
 Pannel | KEY_WHEEL_RIGHT | 
-Other | KEY_FACTORY | 
-Other | KEY_PLUS100 | 
+Other | KEY_FACTORY | display "n/a" - factory key for admin?
+Other | KEY_PLUS100 | display "n/a"
 Other | KEY_DVD_MODE | 
 Other | KEY_QUICK_REPLAY | 
 Other | KEY_DNSe | 
-Other | KEY_ESAVING | 
+Other | KEY_ESAVING | switch energy saving mode
 Other | KEY_DOWN | 
 Other | KEY_BOOKMARK | 
 Other | KEY_MS | 
-Other | KEY_DTV_SIGNAL | 
-Other | KEY_SLEEP | 
+Other | KEY_DTV_SIGNAL | display "n/a"
+Other | KEY_SLEEP | toggle sleep timer
 Other | KEY_DVR_MENU | 
-Other | KEY_PMODE | 
+Other | KEY_PMODE | change picture mode
 Other | KEY_HELP | 
 Other | KEY_CALLER_ID | 
 Other | KEY_SEFFECT | 
@@ -183,12 +183,12 @@ Other | KEY_ID_INPUT |
 Other | KEY_INFO | 
 Other | KEY_PANORAMA | 
 Other | KEY_MORE | 
-Other | KEY_TURBO | 
-Other | KEY_RSS | 
+Other | KEY_TURBO | display "app not installed"
+Other | KEY_RSS | start SmartHUB
 Other | KEY_BACK_MHP | 
 Other | KEY_VCHIP | 
 Other | KEY_ANYNET | 
-Other | KEY_CONTENTS | 
+Other | KEY_CONTENTS | start SmartHUB
 Other | KEY_ENTERTAINMENT | 
 Other | KEY_PROGRAM | 
 Other | KEY_ALT_MHP | 
@@ -200,10 +200,10 @@ Other | KEY_LIVE |
 Other | KEY_HOME | 
 Other | KEY_AD | 
 Other | KEY_DSS_MODE | 
-Other | KEY_MTS | 
-Other | KEY_SOUND_MODE | 
+Other | KEY_MTS |
+Other | KEY_SOUND_MODE | cycle mono, stereo, dual I, dual II
 Other | KEY_GUIDE | 
-Other | KEY_3SPEED | 
+Other | KEY_3SPEED | secrect key for admin menu?
 Other | KEY_PICTURE_SIZE | 
 Other | KEY_CAPTION | 
 Other | KEY_APP_LIST | 
