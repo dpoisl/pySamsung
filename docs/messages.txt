@@ -5,3 +5,10 @@ type;data;meaning
 2;\n\x00\x02\x00\x00\x00;Showing Menu / Tools Menu / Source Menu / E-Manual / AD/SUBT.
 4;\n\x00\x04\x00\x00\x00;Timeshift startet?
 
+
+bitmask:
+00000000 00000001   in tv
+00000001 10000000   in overlay
+00000000 11000000   in ttx
+00000000 00000010   menu
+00000000 00000100   timeshift?

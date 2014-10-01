@@ -1,0 +1,54 @@
+#!/usr/bin/python
+
+import os
+import time
+from optparse import OptionParser
+
+import samsung
+
+
+def parse_options():
+    """
+    parse command line arguments and options
+
+    :return: options and arguments
+    """
+    description = """Send commands to Samsung D-Series (and up) devices. 
+Commands can either start with "KEY_" and be a valid key code or any 
+text (eG usable for password fields, etc.)."""
+    p = OptionParser(usage="usage: %prog [options] command [...]",
+                     version="%prog 1.0.0", description=description)
+    p.add_option("-i", "--ip", dest="ip", help="Device IP (mandatory if you "
+                 "don't set SAMSUNG_DEVICE in your environment)")
+    p.add_option("-p", "--port", dest="port", action="store", type="int", 
+                 default="55000", help="Device Port (default %default)")
+    p.add_option("-d", "--delay", dest="delay", action="store", type="float", 
+                 default="0.5", help="Delay between commands in seconds ("
+                 "default: %default)")
+    (options, args) = p.parse_args()
+    if options.ip is None:
+        try:
+            options.ip = os.environ["SAMSUNG_DEVICE"]
+        except KeyError:
+            p.error("Either set SAMSUNG_DEVICE in the environment or specify "
+                    "the device IP\n")
+    if len(args) == 0:
+        p.error("Please specify one or more commands to send\n")
+    return (options, args)
+
+if __name__ == "__main__":
+    (options, args) = parse_options()
+    device = samsung.SmartTV("pyremote", host=options.ip, port=options.port)
+    for arg in args:
+        if arg.startswith("KEY_"):
+            print("%r" % device.send_key(arg))
+        elif arg.startswith("CH"):
+            for digit in "%04d" % int(arg[2:]):
+                device.send_key("KEY_" + digit)
+        else:
+            print("%r" % device.send_text(arg))
+        time.sleep(options.delay)
+        print("%r" % samsung.Message.parse(device.recv()))
+        print("%r" % samsung.Message.parse(device.recv()))
+        print("%r" % samsung.Message.parse(device.recv()))
+    device.disconnect()
