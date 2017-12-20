@@ -6,7 +6,7 @@ with open('README.md') as readme:
     description = readme.read()
 
 setup(name='samsung',
-      version='0.1.0',
+      version='0.3.0',
       description='network remote library for Samsung C, D and E-Series devices',
       long_description=description,
       author='David Poisl',
