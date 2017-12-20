@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from distutils.core import setup
+from setuptools import setup, find_packages
 
 with open('README.md') as readme:
     description = readme.read()
@@ -13,8 +13,13 @@ setup(name='samsung',
       author_email='david@poisl.at',
       url='https://github.com/dpoisl/pySamsung/',
       platforms=('any',),
-      packages=('samsung',),
-      scripts=('scripts/sstv_remote', 'scripts/sstv_listener'),
+      packages=find_packages(),
+      entry_points={
+          'console_scripts': [
+              'sstv_remote = samsung.cli:remote',
+              'sstv_listener = samsung.cli:listener',
+          ]
+      },
       classifiers=('Development Status :: 3 - Alpha',
                    'Intended Audience :: Developers',
                    'Programming Language :: Python',
