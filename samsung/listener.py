@@ -4,14 +4,15 @@ listen to samsung device events
 get notified when something happens on your TV
 """
 
-
-__version__ = "0.2.0"
-__author__ = "David Poisl <david@poisl.at>"
-
+from __future__ import unicode_literals
 
 import threading
 import socket
 from samsung import base
+
+
+__version__ = '0.3.0'
+__author__ = 'David Poisl <david@poisl.at>'
 
 
 class IterReceiver(base.SmartTV):
@@ -129,7 +130,7 @@ class ThreadReceiver(base.SmartTV, threading.Thread):
             try:
                 msg = base.Message.parse(data)
             except ValueError:
-                print("!!! could not parse %r" % data)
+                print('!!! could not parse %r' % data)
                 continue
             for (matcher, listener) in self._listeners:
                 if matcher(msg):

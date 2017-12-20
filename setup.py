@@ -2,27 +2,27 @@
 
 from distutils.core import setup
 
-with open("README.md") as readme:
+with open('README.md') as readme:
     description = readme.read()
 
-setup(name="samsung", 
-      version="0.1.0",
+setup(name='samsung',
+      version='0.1.0',
       description='network remote library for Samsung C, D and E-Series devices',
       long_description=description,
       author='David Poisl',
       author_email='david@poisl.at',
       url='https://github.com/dpoisl/pySamsung/',
-      platforms=("any",),
+      platforms=('any',),
       packages=('samsung',),
-      scripts=("scripts/sstv_remote", "scripts/sstv_listener"),
-      classifiers=("Development Status :: 3 - Alpha",
-                   "Intended Audience :: Developers",
-                   "Programming Language :: Python",
-                   "Programming Language :: Python :: 3",
-                   "Operating System :: OS Independent",
-                   "Topic :: Software Development :: Libraries",
-                   "Topic :: Multimedia",
-                   "Topic :: Home Automation",
-                   "Topic :: Internet",
+      scripts=('scripts/sstv_remote', 'scripts/sstv_listener'),
+      classifiers=('Development Status :: 3 - Alpha',
+                   'Intended Audience :: Developers',
+                   'Programming Language :: Python',
+                   'Programming Language :: Python :: 3',
+                   'Operating System :: OS Independent',
+                   'Topic :: Software Development :: Libraries',
+                   'Topic :: Multimedia',
+                   'Topic :: Home Automation',
+                   'Topic :: Internet',
                    )
      )
