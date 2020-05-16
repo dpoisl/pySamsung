@@ -6,8 +6,6 @@ __author__ = 'David Poisl <david@poisl.at>'
 __version__ = '1.0.0'
 
 
-from __future__ import unicode_literals, print_function
-
 import os
 import time
 from argparse import ArgumentParser

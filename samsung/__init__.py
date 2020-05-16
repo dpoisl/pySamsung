@@ -10,5 +10,5 @@ Modules in this package:
 from samsung.base import *
 
 
-__version__ = '0.3.0'
+__version__ = '0.4.0'
 __author__ = 'David Poisl <david@poisl.at>'

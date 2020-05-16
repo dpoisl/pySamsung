@@ -1,70 +1,69 @@
 """
-base functionality for Samsung remote control.
+Base functionality to communicate with Samsung Smart TVs.
 """
 
-
-from __future__ import unicode_literals
 import base64
+import enum
 import socket
 import logging
 import uuid  # used for mac detection
 import time
 
+from typing import Optional, Tuple, Union
 
-__version__ = '0.3.0'
+
+__version__ = '0.4.0'
 __author__ = 'David Poisl <david@poisl.at>'
 
 __all__ = ('sstv_string', 'sstv_base64', 'SmartTV', 'Message',
            'parse_sstv_string', 'AuthenticationError')
 
 
-_logger = None
+_logger: Optional[logging.Logger] = None
 _mac = '%012x' % uuid.getnode()
 LOCAL_MAC = ':'.join(_mac[i:i + 2] for i in range(0, 12, 2))
 
 
 class AuthenticationError(Exception):
-    """app is not authenticated"""
+    """App is not authenticated."""
     pass
 
 
-class ResponseType(object):
+class ResponseType(enum.Enum):
     """
-    container for known response types
+    Known response types.
 
-    this information is extracted from tests with a Samsung UE40D5700 TV set
+    This information is extracted from tests with a Samsung UE40D5700 TV set
     and a HT-D5100 BluRay Home Theatre.
 
-    :cvar int KEY_CONFIRM: key received while viewing TV
-    :cvar int STATE_CHANGE: status update from SmartTV
-    :cvar int KEY_CONFIRM_MENU: key received while in menu
-    :cvar int TIMESHIFT: exact meaning unknown, somehow related to time-shift?
-    :cvar int TYPES_ACCEPTED: set of all types confirming a received keypress
+    KEY_CONFIRM key received while viewing TV
+    STATE_CHANGE status update from SmartTV
+    KEY_CONFIRM_MENU key received while in menu
+    TIMESHIFT exact meaning unknown, somehow related to time-shift?
     """
     KEY_CONFIRM = 0x00
     KEY_CONFIRM_MENU = 0x01
     STATE_CHANGE = 0x02
     TIMESHIFT = 0x04
-    TYPES_KEY_ACCEPTED = (KEY_CONFIRM, KEY_CONFIRM_MENU)
 
 
-class ResponsePayload(object):
+class ResponsePayload(enum.Enum):
     """
     container for known response payloads
 
     this information is extracted from tests with a Samsung UE40D5700 TV set
     and a HT-D5100 BluRay Home Theatre.
 
-    :cvar bytes AUTH_OK: authentication response: success
-    :cvar bytes AUTH_ACCESS_DENIED: authentication error: access denied
-    :cvar bytes AUTH_NEED_CONFIRMATION: authentication response: need
-                                        confirmation from user on TV?
-    :cvar bytes AUTH_TIMEOUT: authentication timeout
-    :cvar bytes KEY_OK: response payload for key events
-    :cvar bytes STATUS_SHOWING_MENU: seems to indicate that a menu is active
-    :cvar bytes STATUS_SHOWING_TV: seems to indicate that no menu is visible
-    :cvar bytes STATUS_SHOWING_TTX: seems to indicate that TTX is displayed
-    :cvar bytes STATUS_SHOWING_OVERLAY: sent for some overlays over TV
+    AUTH_OK: authentication response: success
+    AUTH_ACCESS_DENIED: authentication error: access denied
+    AUTH_NEED_CONFIRMATION: authentication response: need
+                            confirmation from user on TV?
+    AUTH_TIMEOUT: authentication timeout
+    KEY_OK: response payload for key events
+    STATUS_SHOWING_MENU: seems to indicate that a menu is active
+    STATUS_SHOWING_TV: seems to indicate that no menu is visible
+    STATUS_SHOWING_TTX: seems to indicate that TTX is displayed
+    STATUS_SHOWING_OVERLAY: sent for some overlays over TV
     """
     AUTH_OK = '\x64\x00\x01\x00'
     AUTH_ACCESS_DENIED = '\x64\x00\x00\x00'
@@ -80,18 +79,17 @@ class ResponsePayload(object):
     STATUS_SHOWING_OVERLAY = '\x10\x00\x18\x00\x00\x00'
 
 
-def set_logging(active=True, logger_name='samsung.base'):
+def set_logging(active: bool = True, logger_name: str = 'samsung.base'):
     """
-    activate debug messages
+    Activate debug messages.
     
     sets the global _logger either to None if active is false
     or to a logging.Logger instance with the given name. This
     enables or disables logging of debug messages.
 
-    :param bool active: activate/deactivate logging (default: True)
-    :param str logger_name: name to use for the logger
+    :param active: activate/deactivate logging (default: True)
+    :param logger_name: name to use for the logger
     :return: the created logger
-    :rtype: logging.Logger or None
     """
     global _logger
     if active:
@@ -102,32 +100,31 @@ def set_logging(active=True, logger_name='samsung.base'):
     return _logger
 
 
-def _log(level, message, *args, **kwargs):
+def _log(level: int, message: str, *args, **kwargs) -> None:
     """
-    handles optional logging (only if set_logging was called with active=True)
+    Handles optional logging (only if set_logging was called with active=True).
 
     This internally calls logging.Logger.log() with all given arguments if
     a logger is initialized in the modules _logger variable.
 
     :param level: log level to use
-    :param str message: log message to send
+    :param message: log message to send
     :param args: positional arguments for Logger.log call
     :param kwargs: keyword arguments for Logger.log call
     """
-    if _logger:
+    if _logger is not None:
         return _logger.log(level, message, *args, **kwargs)
 
 
-def sstv_string(string):
+def sstv_string(string: Union[str, bytes]) -> bytes:
     """
-    convert a string to samsungs string format
+    Convert a string to Samsungs string format.
     
     the samsung communication protocol encodes strings as 2 bytes containing
     the length, then a NULL byte and then the string itself.
 
-    :param str|bytes string: text to encode
+    :param string: text to encode
     :return: the converted string
-    :rtype: bytes
     """
     if isinstance(string, str):
         string = string.encode('ASCII')
@@ -137,28 +134,26 @@ def sstv_string(string):
     return bytes((length % 256, length // 256)) + string
 
 
-def sstv_base64(string):
+def sstv_base64(string: str) -> bytes:
     """
-    Shortcut: base64 encode a string and create a sstv_string of it
+    Shortcut: base64 encode a string and create a sstv_string of it.
 
-    :param str string: text to encode
+    :param string: text to encode
     :return: the resulting sstv_string
-    :rtype: bytes
     """
     return sstv_string(base64.b64encode(string.encode("ASCII")))
 
 
-def parse_sstv_string(data):
+def parse_sstv_string(data: bytes) -> Tuple[str, bytes]:
     """
-    parse a string as returned by samsung devices
+    Parse a string as returned by samsung devices.
 
     Samsung devices send strings with the length as the first two bytes 
     (little endian). This function can be used to get the content from
     these strings.
 
-    :param bytes data: source data
+    :param data: source data
     :return: the parsed string and potentially remaining data
-    :rtype: tuple
     """
     _log(logging.DEBUG, 'Parsing sstv_string %r', data)
     length = data[0] + data[1] * 256
@@ -169,18 +164,18 @@ def parse_sstv_string(data):
     return data[2:length + 2].decode('ASCII'), data[length + 2:]
 
 
-class Message(object):
+class Message:
     """
-    A message sent by a samsung device
+    A message sent by a samsung device.
 
-    :ivar int type: message type
-    :ivar str payload: message payload
-    :ivar str sender: name of the sending device
+    :ivar type: message type
+    :ivar payload: message payload
+    :ivar sender: name of the sending device
     """
 
-    def __init__(self, type_, payload, sender=None):
+    def __init__(self, type_: int, payload: str, sender: Optional[str] = None):
         """
-        constructor
+        Constructor.
 
         :param int type_: message type
         :param str payload: message payload
@@ -191,9 +186,9 @@ class Message(object):
         self.sender = sender
 
     @classmethod
-    def parse(cls, message):
+    def parse(cls, message: bytes) -> 'Message':
         """
-        parse a response as received on the network socket
+        Parse a response as received on the network socket.
 
         :param message: payload received on socket
         :return: Message instance with parsed type, payload and sender
@@ -206,59 +201,58 @@ class Message(object):
                              message, remaining))
         return cls(type_, payload, sender)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """textual representation"""
         return 'Message(sender=%s, type_=%x, payload=%r)' % (
             self.sender, self.type, self.payload)
     
-    def __eq__(self, other):
+    def __eq__(self, other: Union[str, 'Message']) -> bool:
         """
-        compare for equality
+        Compare for equality.
 
         :param other: item to compare to
-        :type other: str or Message
         :return: equality
-        :rtype: bool
         """
-        if isinstance(other, str):
+        if isinstance(other, bytes):
             return self.__eq__(Message.parse(other))
         elif isinstance(other, Message):
             return self.type == other.type and self.payload == other.payload
         else:
             return NotImplemented
     
-    def __str__(self):
-        """string representation"""
+    def __str__(self) -> str:
+        """Get string representation."""
         return '%x:%r' % (self.type, self.payload)
 
-    def __ne__(self, other):
+    def __ne__(self, other: Union[str, 'Message']) -> bool:
         return not self.__eq__(other)
 
 
-class SmartTV(object):
+class SmartTV:
     """
-    connector for samsung SmartTV devices
+    Connector for samsung SmartTV devices.
 
-    provides basic functionality like authentication, receiving and
+    Provides basic functionality like authentication, receiving and
     sending data. as well as higher level functionality like sending
     key codes or strings (eG for text input fields).
 
-    :ivar str app_label: application name (will be used in authentication)
+    :ivar app_label: application name (will be used in authentication)
     """
-    def __init__(self, app_label, host, port=55000, auth_timeout=20.0, 
-                 recv_timeout=2.0):
+    def __init__(self, app_label: str, host: str, port: int = 55000,
+                 auth_timeout: Union[int, float] = 20.0,
+                 recv_timeout: Union[int, float] = 2.0):
         """
-        create a new connection
+        Create a new connection.
 
-        :param str app_label: application label to use for authentication and
-                              data transmission
-        :param str host: ip address or hostname of the device
-        :param int port: tcp port for remote control connection (default:
-                         55000)
-        :param float auth_timeout: authentication timeout in seconds (
-                                   default: 20.0, None=wait forever)
-        :param float recv_timeout: timeout for message polling in seconds. (
-                                   default: 2.0, None = no timeout)
+        :param app_label: application label to use for authentication and
+                          data transmission
+        :param host: ip address or hostname of the device
+        :param port: tcp port for remote control connection (default:
+                     55000)
+        :param auth_timeout: authentication timeout in seconds (
+                             default: 20.0, None=wait forever)
+        :param recv_timeout: timeout for message polling in seconds. (
+                             default: 2.0, None = no timeout)
         """
         self._sockargs = (host, port)
         self.app_label = app_label
@@ -267,23 +261,21 @@ class SmartTV(object):
         self._recv_timeout = recv_timeout
         self._auth_tries = 3
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '%s(%r, %r, %r, %r, %r)' % (self.__class__.__name__,
                                            self.app_label, self._sockargs[0],
                                            self._sockargs[1],
                                            self._auth_timeout,
                                            self._recv_timeout)
     
-    def connect(self):
-        """connect to device and authenticate"""
+    def connect(self) -> None:
+        """Connect to device and authenticate."""
         self._connect()
         self._authenticate()
     
-    def _connect(self):
+    def _connect(self) -> None:
         """
-        connect to the device
-
-        connects to the device socket
+        Connect to the device socket.
 
         :raises: socket.error
         """
@@ -296,11 +288,11 @@ class SmartTV(object):
         except socket.error:
             raise
 
-    def _authenticate(self):
+    def _authenticate(self) -> bool:
         """
-        authenticate with samsung device
+        Authenticate with samsung device.
 
-        performs authentication with the samsung device and returns the
+        Performs authentication with the samsung device and returns the
         authentication result. Raises AuthenticationError if the
         authentication failed.
 
@@ -335,18 +327,17 @@ class SmartTV(object):
             _log(logging.DEBUG, 'ERROR')
             raise AuthenticationError('access denied by remote device')
 
-    def _parse_auth_response(self, response):
+    def _parse_auth_response(self, response: bytes) -> Optional[bool]:
         """
-        parse authentication response
+        Parse authentication response.
 
         Parses the response to an authentication request and returns the
         success as boolean. If the device is still waiting for a
         confirmation from the user, None is returned instead.
     
-        :param str response: authentication response as string
+        :param response: authentication response as string
         :return: None if no response received or we should wait, else
                  authentication result
-        :rtype: bool or None
         """
         if response is None:
             _log(logging.DEBUG, 'got no response')
@@ -370,16 +361,16 @@ class SmartTV(object):
             _log(logging.DEBUG, 'Unknown authentication response')
             raise ValueError('unknown auth response: %r' % parsed)
 
-    def disconnect(self):
-        """disconnect socket"""
+    def disconnect(self) -> None:
+        """Disconnect socket."""
         self._sock.close()
         self._sock = None
     
-    def recv(self):
+    def recv(self) -> bytes:
         """
-        receive raw data from the TV
+        Receive raw data from the TV.
 
-        if no timeout occurs but an empty response is received this is taken as
+        If no timeout occurs but an empty response is received this is taken as
         an indication that the connection got terminated.
 
         :return: received data
@@ -389,7 +380,7 @@ class SmartTV(object):
         try:
             data = self._sock.recv(2048)
             if len(data) == 0:
-                raise socket.timeout('Received 0 bytes -- disconnected?')
+                raise socket.timeout(1, 'Received 0 bytes -- disconnected?')
 
         except socket.timeout:
             _log(logging.DEBUG, 'received nothing')
@@ -401,16 +392,15 @@ class SmartTV(object):
                  self._sock.gettimeout())
         return data
 
-    def send(self, data):
+    def send(self, data: bytes) -> int:
         """
-        send raw data to remote device
+        Send raw data to remote device.
 
-        if the connection to the remote device is not established,
+        If the connection to the remote device is not established,
         self.connect is called before sending th data.
 
-        :param bytes data: binary data to send
+        :param data: binary data to send
         :return: number of bytes transmitted
-        :rtype: int
         :raise: socket.timeout or socket.error
         """
         if self._sock is None:
@@ -419,53 +409,51 @@ class SmartTV(object):
             _log(logging.DEBUG, 'sending %r', data)
             return self._sock.send(data)
         except socket.timeout:
-            _log(logging.warning, 'Timeout when sending')
+            _log(logging.WARNING, 'Timeout when sending')
             raise
         except socket.error:
-            _log(logging.warning, 'Error in connection')
+            _log(logging.WARNING, 'Error in connection')
             raise
     
-    def send_key(self, key):
+    def send_key(self, key: str) -> int:
         """
-        send a key event to the device
+        Send a key event to the device.
 
-        :param str key: key code to send. must start with "KEY_"
-        :return: bytes transmitted via socket
-        :rtype: int
+        :param key: key code to send. must start with "KEY_"
+        :return: number of bytes transmitted via socket
         """
         msg = self._build_message(0x00, b'\x00\x00\x00' + sstv_base64(key))
         return self.send(msg)
 
-    def send_text(self, text):
+    def send_text(self, text: str) -> int:
         """
-        send a text to the device
+        Send a text to the device.
 
-        texts can only be sent if specific fields are highlighted in the user 
+        Texts can only be sent if specific fields are highlighted in the user
         interface, eG password and user name fields, search fields, etc.
 
-        :param str text: text to send
-        :return: bytes transmitted via socket
-        :rtype: int
+        :param text: text to send
+        :return: number of bytes transmitted via socket
         """
         msg = self._build_message(0x01, b'\x01\x00' + sstv_base64(text))
         return self.send(msg)
     
-    def _build_message(self, mode, payload):
+    def _build_message(self, mode: int, payload: bytes) -> bytes:
         """
-        internal helper - build message string
+        Internal helper - build message string.
 
-        :param int mode: message mode ('\x00' = keycode, '\x01' = text)
-        :param bytes payload: message payload
+        :param mode: message mode (\x00 = keycode, \x01 = text)
+        :param payload: message payload
         :return: encoded message
         """
-        return bytes(mode) + sstv_string(self.app_label + '.iapp.samsung') + \
-               sstv_string(payload)
+        return bytes(mode) + sstv_string(self.app_label + '.iapp.samsung') \
+            + sstv_string(payload)
 
-    def set_channel(self, channel, delay=0.1):
+    def set_channel(self, channel: str, delay: float = 0.1) -> None:
         """
-        switch to a specific channel
+        Switch to a specific channel by number.
 
-        the given channel is padded to 4 digits and these are sent to the device
+        The given channel is padded to 4 digits and these are sent to the device
         as single key presses.
 
         :param int channel: channel to switch to (0 .. 9999)

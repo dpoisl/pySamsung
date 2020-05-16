@@ -1,23 +1,22 @@
 """
-listen to samsung device events
+Listen to samsung device events.
 
-get notified when something happens on your TV
+Get notified when something happens on your TV.
 """
-
-from __future__ import unicode_literals
 
 import threading
 import socket
 from samsung import base
 
+from typing import Callable, Union, Optional
 
-__version__ = '0.3.0'
+__version__ = '0.4.0'
 __author__ = 'David Poisl <david@poisl.at>'
 
 
 class IterReceiver(base.SmartTV):
     """
-    iterator-based receiver
+    Iterator-based receiver.
 
     This can be used to listen for all events a Samsung Smart TV sends.
     It can be used as a generator which blocks while waiting for new messages
@@ -28,21 +27,21 @@ class IterReceiver(base.SmartTV):
     taking a Message instance as its sole parameter and return True if the
     Message should be yielded, else False.
     """
-    def __init__(self, app_label, host, port=55000, auth_timeout=20.0,
-                 recv_timeout=2.0, filter_=lambda x: True):
+    def __init__(self, app_label: str, host: str, port: int = 55000,
+                 auth_timeout: Union[float, int] = 20.0,
+                 recv_timeout: Union[float, int] = 2.0,
+                 filter_: Callable = lambda x: True):
         """
-        constructor
+        Constructor.
 
-        :param str app_label: application label for authentication
-        :param str host: host name or IP of the SmartTV
-        :param int port: optional override for the remote port - default 55000
-        :param float auth_timeout: timeout for authentication - default 20.0s
-        :param float recv_timeout: timeout for message receiving - default 2.0s
+        :param app_label: application label for authentication
+        :param host: host name or IP of the SmartTV
+        :param port: optional override for the remote port - default 55000
+        :param auth_timeout: timeout for authentication - default 20.0s
+        :param recv_timeout: timeout for message receiving - default 2.0s
         :param filter_: optional filter method for messages
-        :return:
         """
-        super(IterReceiver, self).__init__(app_label, host, port, auth_timeout,
-                                           recv_timeout)
+        super().__init__(app_label, host, port, auth_timeout, recv_timeout)
         self.filter = filter_
         self._connected = False
 
@@ -66,32 +65,39 @@ class IterReceiver(base.SmartTV):
             if self.filter(msg):
                 return msg
 
-    next = __next__  # python 2/3 compatibility
-
 
 class ThreadReceiver(base.SmartTV, threading.Thread):
     """
-    threaded receiver
+    Threaded receiver.
 
-    for the times where IterReceiver is not enough this can yield received
+    For the times where IterReceiver is not enough this can yield received
     Responses to multiple listeners in a threaded environment.
 
-    use add_listener to add another receiver. The receiver should be a callable
+    Use add_listener to add another receiver. The receiver should be a callable
     taking a Message instance as its only parameter. An optional second
     callable can be given as a filter for this listener.
+
+    :param app_label: application label for authentication
+    :param host: host name or IP of the SmartTV
+    :param port: optional override for the remote port - default 55000
+    :param auth_timeout: timeout for authentication - default 20.0s
+    :param recv_timeout: timeout for message receiving - default 2.0s
+    :param name: Optional thread name
     """
-    def __init__(self, app_label, host, port=55000, auth_timeout=20.0,
-                 recv_timeout=2.0, name=None):
+
+    def __init__(self, app_label: str, host: str, port: int = 55000,
+                 auth_timeout: Union[float, int] = 20.0,
+                 recv_timeout: Union[float, int] = 2.0,
+                 name: Optional[str] = None):
         """
         constructor
 
-        :param str app_label: application label for authentication
-        :param str host: host name or IP of the SmartTV
-        :param int port: optional override for the remote port - default 55000
-        :param float auth_timeout: timeout for authentication - default 20.0s
-        :param float recv_timeout: timeout for message receiving - default 2.0s
-        :param str name: optional thread name
-        :return:
+        :param app_label: application label for authentication
+        :param host: host name or IP of the SmartTV
+        :param port: optional override for the remote port - default 55000
+        :param auth_timeout: timeout for authentication - default 20.0s
+        :param recv_timeout: timeout for message receiving - default 2.0s
+        :param name: optional thread name
         """
         self._listeners = []
         self._stopping = False
@@ -99,9 +105,9 @@ class ThreadReceiver(base.SmartTV, threading.Thread):
                               recv_timeout)
         threading.Thread.__init__(self, name=name)
 
-    def add_listener(self, listener, matcher=lambda x: True):
+    def add_listener(self, listener: Callable, matcher: Callable = lambda x: True) -> None:
         """
-        add another listener to the receiver
+        Add another listener to the receiver.
 
         the given listener will get notified for all Responses sent from the
         Smart TV. It should be a callable taking a Message instance as its
@@ -110,15 +116,13 @@ class ThreadReceiver(base.SmartTV, threading.Thread):
         taking a Message instance as its argument and return True for
         responses that should be sent to the listener.
 
-        :param callable listener: callback for matching messages
-        :param callable matcher: matcher for this listener.
+        :param listener: callback for matching messages
+        :param matcher: matcher for this listener.
         """
         self._listeners.append((matcher, listener))
 
-    def run(self):
-        """
-        main loop for the listener thread
-        """
+    def run(self) -> None:
+        """Main loop for the listener thread."""
         self._stopping = False
         self.connect()
         while not self._stopping:
@@ -139,19 +143,15 @@ class ThreadReceiver(base.SmartTV, threading.Thread):
         self.disconnect()
         self._stopping = False
 
-    def stop(self):
-        """
-        stop thread gracefully
-
-        :return:
-        """
+    def stop(self) -> None:
+        """Stop thread gracefully."""
         self._stopping = True
 
-    def join(self, timeout=None):
+    def join(self, timeout: Optional[float] = None) -> None:
         """
-        join thread gracefully
+        Join thread gracefully.
 
-        :param float timeout: optional timeout for Thread.join()
+        :param timeout: optional timeout for Thread.join()
         """
         self._stopping = True
         super(ThreadReceiver, self).join(timeout)
