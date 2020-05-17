@@ -1,5 +1,5 @@
 """
-Library to communicate with Samsung entertainment devices
+Library to communicate with Samsung entertainment devices.
 
 Modules in this package:
     base: message parsing, constructing and basic communication class

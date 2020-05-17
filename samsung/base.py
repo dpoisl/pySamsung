@@ -4,12 +4,11 @@ Base functionality to communicate with Samsung Smart TVs.
 
 import base64
 import enum
-import socket
 import logging
-import uuid  # used for mac detection
+import socket
 import time
-
 from typing import Optional, Tuple, Union
+import uuid  # used for mac detection
 
 
 __version__ = '0.4.0'
@@ -26,7 +25,6 @@ LOCAL_MAC = ':'.join(_mac[i:i + 2] for i in range(0, 12, 2))
 
 class AuthenticationError(Exception):
     """App is not authenticated."""
-    pass
 
 
 class ResponseType(enum.Enum):
@@ -254,7 +252,7 @@ class SmartTV:
         :param recv_timeout: timeout for message polling in seconds. (
                              default: 2.0, None = no timeout)
         """
-        self._sockargs = (host, port)
+        self._sock_args = (host, port)
         self.app_label = app_label
         self._sock = None
         self._auth_timeout = auth_timeout
@@ -263,8 +261,8 @@ class SmartTV:
 
     def __repr__(self) -> str:
         return '%s(%r, %r, %r, %r, %r)' % (self.__class__.__name__,
-                                           self.app_label, self._sockargs[0],
-                                           self._sockargs[1],
+                                           self.app_label, self._sock_args[0],
+                                           self._sock_args[1],
                                            self._auth_timeout,
                                            self._recv_timeout)
     
@@ -279,12 +277,12 @@ class SmartTV:
 
         :raises: socket.error
         """
-        _log(logging.DEBUG, 'Connecting to %s:%d', self._sockargs[0],
-             self._sockargs[1])
+        _log(logging.DEBUG, 'Connecting to %s:%d', self._sock_args[0],
+             self._sock_args[1])
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._sock.settimeout(self._auth_timeout)
         try:
-            self._sock.connect(self._sockargs)
+            self._sock.connect(self._sock_args)
         except socket.error:
             raise
 

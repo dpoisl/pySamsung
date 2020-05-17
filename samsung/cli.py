@@ -1,16 +1,15 @@
-"""
-CLI entry points for samsung remote
-"""
+"""CLI entry points for samsung remote."""
 
 __author__ = 'David Poisl <david@poisl.at>'
 __version__ = '1.0.0'
 
 
+from argparse import ArgumentParser
+import datetime
 import os
 import time
-from argparse import ArgumentParser
+
 from samsung import listener, base
-import datetime
 
 base.set_logging(True)
 
@@ -25,6 +24,7 @@ def debug_print(message):
 
 
 def listen():
+    """Basic listener."""
     base.set_logging(True)
     l = listener.ThreadReceiver('pyremote', '192.168.1.120')
     l.add_listener(debug_print)
@@ -47,11 +47,12 @@ def parse_remote_options():
 Commands can either start with 'KEY_' and be a valid key code or any
 text (eG usable for password fields, etc.).'''
     p = ArgumentParser(description=description)
-    p.add_argument('-i', '--ip', dest='ip', help='Device IP (mandatory if you '
-                                                 'don\'t set SAMSUNG_DEVICE in your environment)')
-    p.add_argument('-p', '--port', dest='port', action='store', type='int',
+    p.add_argument('-i', '--ip', dest='ip',
+                   help='Device IP (mandatory if you don\'t set '
+                        'SAMSUNG_DEVICE in your environment)')
+    p.add_argument('-p', '--port', dest='port', action='store', type=int,
                    default='55000', help='Device Port (default %(default)s')
-    p.add_argument('-d', '--delay', dest='delay', action='store', type='float',
+    p.add_argument('-d', '--delay', dest='delay', action='store', type=float,
                    default='0.5', help='Delay between commands in seconds ('
                                        'default: %(default)s')
     p.add_argument('keys', nargs='+')
